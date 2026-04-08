@@ -2935,11 +2935,6 @@
                                 <h2 class="manage-properties-title">Properties</h2>
                                 <select id="managePropertyTypeFilter" class="manage-properties-select">
                                     <option value="all">All</option>
-  
-                                    <option value="apartment">Apartment</option>
-                                    <option value="plot">Plot</option>
-                                    <option value="house">Villa</option>
-                                    
                                     @foreach (($manageProperties ?? collect())->pluck('type')->filter()->unique()->values() as $propertyType)
                                         <option value="{{ strtolower($propertyType) }}">{{ ucfirst($propertyType) }}</option>
                                     @endforeach
@@ -2966,20 +2961,20 @@
                                             <th>Title</th>
                                             <th>Post by</th>
                                             <th>Type</th>
-                                            <th>City</th>
+                                            <th>Location</th>
                                             <th>Approval Status</th>
                                             <th>Status</th>
-                                            
+                                            <th>New Launched</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="managePropertiesBody">
                                         @forelse (($manageProperties ?? []) as $property)
-                                            <tr class="manage-property-row" data-title="{{ strtolower($property->title ?? '') }}" data-type="{{ strtolower($property->type ?? '') }}">
+                                            <tr class="manage-property-row" data-title="{{ strtolower($property->title ?? '') }}" data-type="{{ strtolower($property->type ?? '') }}" data-area="{{ strtolower($property->property_area ?? '') }}">
                                                 <td style="font-weight:600;">{{ $property->title ?: 'Untitled Property' }}</td>
                                                 <td>{{ $property->post_by ?: '-' }}</td>
                                                 <td>{{ $property->type ?: '-' }}</td>
-                                                <td>{{ $property->city ?: '-' }}</td>
+                                                <td>{{ $property->property_area ?: '-' }}</td>
                                                 <td>
                                                     <select class="status-select {{ (int)$property->approve_status === 1 ? 'bg-green' : ((int)$property->approve_status === 0 ? 'bg-red' : 'bg-pending') }}" onchange="this.className='status-select ' + (this.value=='1' ? 'bg-green' : (this.value=='0' ? 'bg-red' : 'bg-pending'))">
                                                         <option value="1" {{ (int)$property->approve_status === 1 ? 'selected' : '' }}>Approve</option>
@@ -2993,15 +2988,24 @@
                                                         <option value="0" {{ (int)$property->status === 0 ? 'selected' : '' }}>Inactive</option>
                                                     </select>
                                                 </td>
-                                                
+                                                <td>
+                                                    <select class="status-select {{ strtolower($property->new_launched ?? 'no') === 'yes' ? 'bg-green' : 'bg-red' }}" onchange="this.className='status-select ' + (this.value=='yes' ? 'bg-green' : 'bg-red')">
+                                                        <option value="yes" {{ strtolower($property->new_launched ?? 'no') === 'yes' ? 'selected' : '' }}>Yes</option>
+                                                        <option value="no" {{ strtolower($property->new_launched ?? 'no') === 'no' ? 'selected' : '' }}>No</option>
+                                                    </select>
+                                                </td>
                                                 <td>
                                                     <div class="manage-property-actions">
-                                                        <button type="button" class="btn-action btn-edit is-disabled" title="Property edit is not wired in this panel yet" aria-label="Edit property unavailable">
+                                                        <a href="{{ route('admin.properties.edit', ['user' => $user->id, 'id' => $property->id]) }}" class="btn-action btn-edit" title="Edit">
                                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                                        </button>
-                                                        <button type="button" class="btn-action btn-delete is-disabled" title="Property delete is not wired in this panel yet" aria-label="Delete property unavailable">
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                                        </button>
+                                                        </a>
+                                                        <form method="POST" action="{{ route('admin.properties.destroy', ['user' => $user->id, 'id' => $property->id]) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this property?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn-action btn-delete" title="Delete">
+                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                                            </button>
+                                                        </form>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -3136,7 +3140,7 @@
                                     <h3 class="choose-type-title">RESIDENTIAL</h3>
                                     <p class="choose-type-count">Total:{{ $residentialCount ?? 0 }} Properties</p>
                                 </a>
-                                
+                            </div>
                         </div>
 
                     @elseif ($currentPage === 'add-property')
@@ -3188,7 +3192,7 @@
                         <div class="add-property-wrap">
                             <div class="add-property-head">
                                 <div>
-                                    <h2 class="add-property-title">{{ ucfirst($selectedPropertyType ?? 'property') }} Property</h2>
+                                    <h2 class="add-property-title">{{ ($mode ?? 'create') === 'edit' ? 'Edit' : ucfirst($selectedPropertyType ?? 'property') }} Property</h2>
                                     <p class="add-property-subtitle">Create the full {{ $selectedPropertyType ?? 'property' }} listing in one page with media, pricing, address, amenities, content, and FAQs.</p>
                                 </div>
                                 <a href="{{ route('admin.section', ['user' => $user, 'section' => 'manage-properties']) }}" class="add-property-back">
@@ -3197,7 +3201,11 @@
                                 </a>
                             </div>
 
-                            <form id="addPropertyForm" class="add-property-form" onsubmit="event.preventDefault();">
+                            <form id="addPropertyForm" class="add-property-form" method="POST" action="{{ ($mode ?? 'create') === 'edit' ? route('admin.properties.update', ['user' => $user->id, 'id' => $property->id]) : '#' }}" onsubmit="event.preventDefault();">
+                                @csrf
+                                @if(($mode ?? 'create') === 'edit')
+                                    @method('PUT')
+                                @endif
                                 <div class="property-form-grid">
                                     <div class="property-form-card">
                                         <h3>Add Property</h3>
@@ -3232,11 +3240,11 @@
                                             </div>
                                             <div class="property-field">
                                                 <label for="propertyName">Name of the Property *</label>
-                                                <input type="text" id="propertyName" name="property_name" placeholder="Enter Property Name" required>
+                                                <input type="text" id="propertyName" name="property_name" placeholder="Enter Property Name" value="{{ $property->property_name ?? '' }}" required>
                                             </div>
                                             <div class="property-field col-6">
                                                 <label for="propertyFullAddress">Full Address *</label>
-                                                <input type="text" id="propertyFullAddress" name="full_address" placeholder="Enter Address" readonly required>
+                                                <input type="text" id="propertyFullAddress" name="full_address" placeholder="Enter Address" value="{{ $property->full_address ?? '' }}" readonly required>
                                             </div>
                                             <div class="property-field col-6">
                                                 <label for="propertyType">Property Type</label>
@@ -3619,15 +3627,15 @@
                             }
 
                             .status-verified, .status-active { 
-                                background-color: #39f0ce; 
-                                color: #fdfdfd;
+                                background-color: #e8f9f6; 
+                                color: #1db8a0;
                                 border-color: #b3e6de;
                                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231db8a0' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
                                 animation: userStatusPulsed 3s ease-in-out infinite;
                             }
                             .status-unverified, .status-inactive { 
-                                background-color: #e98d03;
-                                color: #ffffff;
+                                background-color: #fff1f3;
+                                color: #ef476f;
                                 border-color: #ffcbd4;
                                 background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ef476f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
                                 animation: userStatusPulseInactive 3s ease-in-out infinite;
@@ -3779,8 +3787,8 @@
                                                     <input type="text" name="first_name" id="userFirstName" class="form-control" placeholder="John" required>
                                                 </div>
                                                 <div class="form-group">
-                                                    <label class="form-label">Last Name <span style="color: #ef476f;"></span></label>
-                                                    <input type="text" name="last_name" id="userLastName" class="form-control" placeholder="Doe" >
+                                                    <label class="form-label">Last Name <span style="color: #ef476f;">*</span></label>
+                                                    <input type="text" name="last_name" id="userLastName" class="form-control" placeholder="Doe" required>
                                                 </div>
                                             </div>
                                             <div class="form-group">
@@ -4662,7 +4670,7 @@
                         const rowType = row.dataset.type || '';
                         const rowTitle = row.dataset.title || '';
                         const matchType = selectedType === 'all' || rowType === selectedType;
-                        const matchTitle = titleTerm === '' || rowTitle.includes(titleTerm);
+                        const matchTitle = titleTerm === '' || rowTitle.includes(titleTerm) || (row.dataset.area && row.dataset.area.includes(titleTerm));
                         return matchType && matchTitle;
                     });
 

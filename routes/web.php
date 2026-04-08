@@ -8,6 +8,10 @@ Route::post('/', [AdminRegistrationController::class, 'store'])->name('admin.reg
 Route::get('/dashboard/{user}', [AdminRegistrationController::class, 'dashboard'])->name('admin.dashboard');
 Route::get('/dashboard/{user}/properties/create', [AdminRegistrationController::class, 'choosePropertyType'])->name('admin.properties.create');
 Route::get('/dashboard/{user}/properties/create/{type}', [AdminRegistrationController::class, 'createPropertyForm'])->name('admin.properties.create.type');
+Route::get('/dashboard/{user}/properties/{id}/edit', [AdminRegistrationController::class, 'editProperty'])->name('admin.properties.edit');
+Route::put('/dashboard/{user}/properties/{id}', [AdminRegistrationController::class, 'updateProperty'])->name('admin.properties.update');
+Route::delete('/dashboard/{user}/properties/{id}', [AdminRegistrationController::class, 'destroyProperty'])->name('admin.properties.destroy');
+
 Route::get('/dashboard/{user}/section/{section}', [AdminRegistrationController::class, 'section'])->name('admin.section');
 Route::post('/dashboard/{user}/amenities', [AdminRegistrationController::class, 'storeAmenity'])->name('admin.amenities.store');
 Route::put('/dashboard/{user}/amenities/{amenity}', [AdminRegistrationController::class, 'updateAmenity'])->name('admin.amenities.update');

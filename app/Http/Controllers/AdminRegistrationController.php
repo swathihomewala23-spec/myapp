@@ -141,6 +141,79 @@ class AdminRegistrationController extends Controller
         ));
     }
 
+    public function editProperty(User $user, int $id): View
+    {
+        $connection = $this->resolvePropertiesConnection();
+        $property = null;
+        if ($connection && Schema::connection($connection)->hasTable('properties')) {
+            $property = DB::connection($connection)->table('properties')->where('id', $id)->first();
+        }
+
+        abort_if(!$property, 404);
+
+        return view('admin-dashboard', array_merge(
+            $this->dashboardViewData($user),
+            [
+                'currentPage' => 'add-property',
+                'currentGroup' => 'property-management',
+                'currentItem' => [
+                    'label' => 'Edit Property',
+                    'slug' => 'manage-properties',
+                    'group' => 'property-management',
+                ],
+                'property' => $property,
+                'mode' => 'edit',
+                'selectedPropertyType' => strtolower($property->type ?? 'residential'),
+                'countries' => \App\Models\Country::orderBy('name')->get(),
+                'states' => \App\Models\State::with('country')->orderBy('name')->get(),
+                'cities' => \App\Models\City::with(['country', 'state'])->orderBy('name')->get(),
+                'propertyPlaces' => \App\Models\PropertyPlace::orderBy('name')->get(),
+                'amenities' => \App\Models\Amenity::orderBy('serial_number')->get(),
+                'categories' => \App\Models\Category::orderBy('serial_number')->get(),
+            ]
+        ));
+    }
+
+    public function destroyProperty(User $user, int $id): RedirectResponse
+    {
+        $connection = $this->resolvePropertiesConnection();
+        if ($connection && Schema::connection($connection)->hasTable('properties')) {
+            DB::connection($connection)->table('properties')->where('id', $id)->delete();
+            return redirect()
+                ->route('admin.section', ['user' => $user, 'section' => 'manage-properties'])
+                ->with('status', 'Property deleted successfully.');
+        }
+
+        return redirect()
+            ->route('admin.section', ['user' => $user, 'section' => 'manage-properties'])
+            ->with('status', 'Property table not found.');
+    }
+
+    public function updateProperty(Request $request, User $user, int $id): RedirectResponse
+    {
+        $connection = $this->resolvePropertiesConnection();
+        if ($connection && Schema::connection($connection)->hasTable('properties')) {
+            $validated = $request->validate([
+                'property_name' => 'required|string|max:255',
+                'property_type' => 'nullable|string',
+                'status' => 'required',
+            ]);
+
+            DB::connection($connection)->table('properties')->where('id', $id)->update([
+                'property_name' => $validated['property_name'],
+                'type' => $validated['property_type'] ?? 'residential',
+                'status' => $validated['status'],
+                'updated_at' => now(),
+            ]);
+
+            return redirect()
+                ->route('admin.section', ['user' => $user, 'section' => 'manage-properties'])
+                ->with('status', 'Property updated successfully.');
+        }
+
+        return redirect()->back()->with('status', 'Could not update property.');
+    }
+
     public function section(User $user, string $section): View
     {
         $menu = array_merge($this->menuGroups(), $this->profileMenuGroups());
@@ -181,12 +254,14 @@ class AdminRegistrationController extends Controller
                         'properties.id',
                         'properties.property_name',
                         'properties.type',
-                        'properties.city',
+                        'properties.property_area',
                         'properties.status',
                         'properties.approve_status',
                         'properties.new_launched',
                         'properties.elite_project',
-                        'properties.created_at'
+                        'properties.created_at',
+                        'properties.vendor_id',
+                        'properties.agent_id'
                     )
                     ->orderByDesc('properties.id');
 
