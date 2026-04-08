@@ -254,6 +254,7 @@ class AdminRegistrationController extends Controller
                         'properties.id',
                         'properties.property_name',
                         'properties.type',
+                        'properties.category_id',
                         'properties.property_area',
                         'properties.status',
                         'properties.approve_status',
@@ -264,6 +265,11 @@ class AdminRegistrationController extends Controller
                         'properties.agent_id'
                     )
                     ->orderByDesc('properties.id');
+
+                if (Schema::connection($connection)->hasTable('property_categories')) {
+                    $query->leftJoin('property_categories', 'property_categories.id', '=', 'properties.category_id')
+                        ->addSelect('property_categories.name as category_name');
+                }
 
                 if (Schema::connection($connection)->hasTable('property_contents')) {
                     $query->leftJoin('property_contents', 'property_contents.property_id', '=', 'properties.id')
@@ -287,6 +293,7 @@ class AdminRegistrationController extends Controller
 
                     $property->title = $title ?: 'Untitled Property';
                     $property->post_by = $postBy;
+                    $property->type = $property->category_name ?? $property->type;
 
                     return $property;
                 });

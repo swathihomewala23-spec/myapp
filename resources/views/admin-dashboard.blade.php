@@ -2964,7 +2964,7 @@
                                             <th>Location</th>
                                             <th>Approval Status</th>
                                             <th>Status</th>
-                                            <th>New Launched</th>
+                                          
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -2988,12 +2988,7 @@
                                                         <option value="0" {{ (int)$property->status === 0 ? 'selected' : '' }}>Inactive</option>
                                                     </select>
                                                 </td>
-                                                <td>
-                                                    <select class="status-select {{ strtolower($property->new_launched ?? 'no') === 'yes' ? 'bg-green' : 'bg-red' }}" onchange="this.className='status-select ' + (this.value=='yes' ? 'bg-green' : 'bg-red')">
-                                                        <option value="yes" {{ strtolower($property->new_launched ?? 'no') === 'yes' ? 'selected' : '' }}>Yes</option>
-                                                        <option value="no" {{ strtolower($property->new_launched ?? 'no') === 'no' ? 'selected' : '' }}>No</option>
-                                                    </select>
-                                                </td>
+                                                
                                                 <td>
                                                     <div class="manage-property-actions">
                                                         <a href="{{ route('admin.properties.edit', ['user' => $user->id, 'id' => $property->id]) }}" class="btn-action btn-edit" title="Edit">
