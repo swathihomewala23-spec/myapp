@@ -1,3 +1,288 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Homewala</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --card: #ffffff;
+            --line: #d6deea;
+            --text: #111827;
+            --muted: #6b7280;
+            --brand: #27a2e5;
+            --brand-dark: #1788d4;
+            --shadow: 0 28px 70px rgba(53, 82, 120, 0.18);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top, rgba(39, 162, 229, 0.12), transparent 32%),
+                linear-gradient(180deg, #fbfdff 0%, #f4f8fd 100%);
+            color: var(--text);
+        }
+
+        .login-shell {
+            width: 100%;
+            max-width: 540px;
+            display: grid;
+            gap: 24px;
+            justify-items: center;
+        }
+
+        .brand-mark img {
+            width: 220px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .login-card {
+            width: 100%;
+            background: var(--card);
+            border-radius: 28px;
+            padding: 28px 36px 30px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(214, 222, 234, 0.9);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .welcome {
+            margin: 0;
+            color: #374151;
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .title {
+            margin: 8px 0 0;
+            font-size: 2rem;
+            font-weight: 500;
+            color: #111827;
+        }
+
+        .error-msg {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid #fecaca;
+            background: #fff1f2;
+            color: #b91c1c;
+            font-size: 0.92rem;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .label {
+            display: block;
+            margin-bottom: 8px;
+            color: #202938;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .control {
+            width: 100%;
+            min-height: 50px;
+            border: 1px solid #cfd8e3;
+            border-radius: 12px;
+            padding: 13px 22px;
+            font-size: 0.98rem;
+            color: #111827;
+            background: #fff;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .control::placeholder {
+            color: #a3aab4;
+        }
+
+        .control:focus {
+            border-color: rgba(39, 162, 229, 0.75);
+            box-shadow: 0 0 0 4px rgba(39, 162, 229, 0.12);
+        }
+
+        .options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin: 2px 0 18px;
+            flex-wrap: wrap;
+        }
+
+        .remember {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .remember input {
+            width: 15px;
+            height: 15px;
+            accent-color: var(--brand);
+        }
+
+        .forgot {
+            color: var(--brand);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .btn {
+            width: 100%;
+            border: 0;
+            border-radius: 12px;
+            padding: 15px 20px;
+            background: linear-gradient(180deg, var(--brand) 0%, #2496d7 100%);
+            color: #fff;
+            font-size: 1.02rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 28px rgba(39, 162, 229, 0.25);
+            background: linear-gradient(180deg, #32aae8 0%, var(--brand-dark) 100%);
+        }
+
+        .btn.loading {
+            pointer-events: none;
+            opacity: 0.88;
+        }
+
+        .btn-content {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 640px) {
+            .login-card {
+                padding: 24px 20px;
+                border-radius: 22px;
+            }
+
+            .title {
+                font-size: 1.85rem;
+            }
+
+            .brand-mark img {
+                width: 190px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-shell">
+        <div class="brand-mark">
+            <img src="{{ asset('images/homewala-logo.png') }}" alt="Homewala">
+        </div>
+
+        <div class="login-card">
+            <div class="header">
+                <p class="welcome">Welcome to</p>
+                <h1 class="title">Admin</h1>
+            </div>
+
+            @if ($errors->any())
+                <div class="error-msg">{{ $errors->first() }}</div>
+            @endif
+
+            <form action="{{ route('admin.login.submit') }}" method="POST" id="loginForm">
+                @csrf
+
+                <div class="form-group">
+                    <label class="label" for="username">Username or email address</label>
+                    <input
+                        id="username"
+                        class="control"
+                        type="text"
+                        name="username"
+                        value="{{ old('username') }}"
+                        placeholder="Username or email address"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="label" for="password">Password</label>
+                    <input
+                        id="password"
+                        class="control"
+                        type="password"
+                        name="password"
+                        placeholder="Enter password"
+                        required
+                    >
+                </div>
+
+                <div class="options">
+                    <label class="remember">
+                        <input type="checkbox" name="remember">
+                        <span>Keep me logged in</span>
+                    </label>
+                    <a href="#" class="forgot">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">
+                    <span class="btn-content">
+                        <span>Sign In</span>
+                    </span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const button = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', () => {
+            button.classList.add('loading');
+            button.innerHTML = '<span class="btn-content"><span class="spinner"></span><span>Signing in...</span></span>';
+        });
+    </script>
+</body>
+</html> -->
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -225,7 +510,7 @@
     </head>
     <body>
         <main class="page-shell">
-            <section class="auth-wrap">
+             <section class="auth-wrap">
                 <h1 class="brand" aria-label="Homewala">
                     <img src="{{ asset('images/homewala-logo.png') }}" alt="Homewala logo" class="brand-logo" />
                 </h1>
