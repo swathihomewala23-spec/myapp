@@ -636,7 +636,7 @@
             <tbody id="ptTableBody">
                 @forelse ($partners as $partner)
                     @php
-                        $ptImg  = $partner->image ? asset('storage/' . ltrim($partner->image, '/')) : null;
+                        $ptImg  = $partner->image ? \App\Support\MediaPath::url($partner->image) : null;
                         $ptDate = $partner->created_at
                                     ? \Carbon\Carbon::parse($partner->created_at)->format('d M Y, h:i A')
                                     : '—';

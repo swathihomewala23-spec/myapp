@@ -21,7 +21,7 @@
                 <label class="block text-gray-700 text-sm font-bold mb-2">Image*</label>
                 <div class="flex items-center gap-6">
                     @if($user->profile_image)
-                        <img src="{{ asset('storage/' . $user->profile_image) }}" alt="Profile" class="w-24 h-24 rounded-lg object-cover border">
+                        <img src="{{ \App\Support\MediaPath::url($user->profile_image) }}" alt="Profile" class="w-24 h-24 rounded-lg object-cover border">
                     @endif
                     <div>
                         <input type="file" name="profile_image" class="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
@@ -481,7 +481,7 @@
 
                             <img
                                 id="profilePreview"
-                                src="{{ $user->profile_image ? asset('storage/' . $user->profile_image) : 'https://ui-avatars.com/api/?name=' . urlencode($user->first_name ?? 'Admin') . '&background=2563eb&color=fff&size=300' }}"
+                                src="{{ $user->profile_image ? \App\Support\MediaPath::url($user->profile_image) : 'https://ui-avatars.com/api/?name=' . urlencode($user->first_name ?? 'Admin') . '&background=2563eb&color=fff&size=300' }}"
                                 alt="Profile"
                                 class="profile-image">
 
@@ -507,7 +507,7 @@
                                 {{ $message }}
                             </div>
                         @enderror
-
+                        
                     </div>
 
                     <!-- RIGHT SIDE -->

@@ -21,6 +21,7 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::post('/dashboard/properties', [AdminRegistrationController::class, 'storeProperty'])->name('admin.properties.store');
     Route::get('/dashboard/properties/{id}/edit', [AdminRegistrationController::class, 'editProperty'])->name('admin.properties.edit');
     Route::put('/dashboard/properties/{id}', [AdminRegistrationController::class, 'updateProperty'])->name('admin.properties.update');
+    Route::put('/dashboard/properties/{id}/approval-status', [AdminRegistrationController::class, 'updatePropertyApprovalStatus'])->name('admin.properties.approval-status');
     Route::delete('/dashboard/properties/{id}', [AdminRegistrationController::class, 'destroyProperty'])->name('admin.properties.destroy');
 
     Route::get('/dashboard/section/{section}', [AdminRegistrationController::class, 'section'])->name('admin.section');
@@ -107,6 +108,11 @@ Route::middleware('auth:vendor')->group(function () {
     Route::put('/vendor/profile', [\App\Http\Controllers\VendorDashboardController::class, 'updateProfile'])->name('vendor.profile.update');
     Route::put('/vendor/password', [\App\Http\Controllers\VendorDashboardController::class, 'updatePassword'])->name('vendor.password.update');
     Route::post('/vendor/property', [\App\Http\Controllers\VendorDashboardController::class, 'storeProperty'])->name('vendor.property.store');
+    Route::get('/vendor/property/{propertyId}/edit', [\App\Http\Controllers\VendorDashboardController::class, 'editProperty'])->name('vendor.property.edit');
+    Route::put('/vendor/property/{propertyId}', [\App\Http\Controllers\VendorDashboardController::class, 'updateProperty'])->name('vendor.property.update');
+    Route::delete('/vendor/property/{propertyId}', [\App\Http\Controllers\VendorDashboardController::class, 'destroyProperty'])->name('vendor.property.destroy');
+    // Partial update (used for quick updates like status/name/category)
+    Route::put('/vendor/property/{propertyId}/partial', [\App\Http\Controllers\VendorDashboardController::class, 'updatePropertyPartial'])->name('vendor.property.partial');
 });
 
 Route::get('/vendor-auto-login', function() {
@@ -118,4 +124,3 @@ Route::get('/vendor-auto-login', function() {
     }
     return 'No vendor found';
 });
-

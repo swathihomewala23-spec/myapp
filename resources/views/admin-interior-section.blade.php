@@ -745,7 +745,7 @@
             <tbody id="idTableBody">
                 @forelse ($interiorDesigns as $interior)
                     @php
-                        $idImg     = $interior->image ? asset('storage/' . ltrim($interior->image, '/')) : null;
+                        $idImg     = $interior->image ? \App\Support\MediaPath::url($interior->image, 'storage/public/interior_designs') : null;
                         $idDate    = $interior->created_at
                                         ? \Carbon\Carbon::parse($interior->created_at)->format('d M Y, h:i A')
                                         : '—';

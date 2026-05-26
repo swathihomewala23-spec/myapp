@@ -4,13 +4,22 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class BannerController extends Controller
 {
     public function index()
     {
-        $banners = Banner::where('status', true)->get();
+        $query = Banner::query();
+
+        if (Schema::hasColumn('banners', 'status')) {
+            $query->where('status', true);
+        }
+
+        $banners = $query->get()->map(function (Banner $banner) {
+            $banner->image = $banner->image ?? $banner->file_path ?? null;
+            return $banner;
+        });
 
         return response()->json([
             'success' => true,

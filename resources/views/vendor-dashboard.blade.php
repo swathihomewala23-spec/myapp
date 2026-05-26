@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+    <head>
+        <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vendor Dashboard - Homewala</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito-sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -653,6 +657,14 @@
                 display: flex;
             }
 
+            details.avatar-details[open] > .avatar-dropdown {
+                display: flex;
+            }
+
+            /* details-based avatar wrapper reset */
+            .avatar-details summary { list-style: none; }
+            .avatar-details summary::-webkit-details-marker { display: none; }
+
             .dropdown-profile-card {
                 display: flex;
                 align-items: center;
@@ -751,6 +763,13 @@
                 margin-top: 20px;
                 box-shadow: var(--shadow-sm);
             }
+            
+            /* Gallery / Preview thumbnails */
+            .gallery-preview-row { display:flex; align-items:center; gap:10px; padding:12px 0; }
+            .gallery-thumb { width:72px; height:72px; border-radius:8px; overflow:hidden; position:relative; border:1px solid #eef2f7; background:#fff; display:inline-block; }
+            .gallery-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+            .thumb-remove { position:absolute; top:-8px; right:-8px; background:#fff; border:1px solid #ffdfe6; color:#ef476f; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; cursor:pointer; font-weight:700; box-shadow:0 6px 12px rgba(15,23,42,0.06); }
+            .display-preview-img { width:120px; height:120px; border-radius:8px; object-fit:cover; border:1px solid #eef2f7; }
             .add-property-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid #e9eef5; background: #fff; }
             .add-property-title { margin: 0; font-size: 18px; font-weight: 700; color: var(--text-dark); }
             .add-property-subtitle { margin: 6px 0 0; color: var(--text-gray); font-size: 12px; }
@@ -814,9 +833,11 @@
             
             .gallery-preview-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
             .gallery-preview-card { width: 80px; height: 80px; border-radius: 8px; background-size: cover; background-position: center; position: relative; border: 1px solid #dfe5ee; }
+            .gallery-preview-card-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 5px; background: rgba(15,23,42,.72); color: #fff; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 0 0 8px 8px; }
             .remove-gallery-img, .remove-img-btn { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; border: 2px solid #fff; }
             .gallery-add-card { width: 80px; height: 80px; border-radius: 8px; border: 2px dashed #dfe5ee; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #64748b; cursor: pointer; transition: var(--transition-ease); }
             .gallery-add-card:hover { border-color: #1877F2; color: #1877F2; }
+            .media-selection-summary { margin-top: 8px; color: var(--text-gray); font-size: 12px; }
 
             .multi-select-wrapper { position: relative; border: 1px solid #dfe5ee; border-radius: 8px; background: #f8fafc; padding: 5px; }
             .selected-chips-area { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }
@@ -1221,43 +1242,19 @@
                 </div>
             </div>
             <div class="navbar-right" style="position: relative;">
-                <div class="vendor-avatar" onclick="toggleAvatarDropdown()" style="cursor: pointer;">
-                    @if($vendor->photo)
-                        <img src="{{ Storage::url($vendor->photo) }}" alt="Vendor">
-                    @else
-                        <!-- Fallback if no photo -->
-                        <span style="font-size: 16px; font-weight: 600; color: #475569;">{{ substr($vendor->first_name ?? 'V', 0, 1) }}{{ substr($vendor->last_name ?? '', 0, 1) }}</span>
-                    @endif
-                </div>
+                <details class="avatar-details" style="position: relative;">
+                    <summary class="vendor-avatar" style="cursor: pointer; list-style: none;">
+                        @if($vendor->photo)
+                            <img src="{{ \App\Support\MediaPath::url($vendor->photo) }}" alt="Vendor">
+                        @else
+                            <span style="font-size: 16px; font-weight: 600; color: #475569;">{{ substr($vendor->first_name ?? 'V', 0, 1) }}{{ substr($vendor->last_name ?? '', 0, 1) }}</span>
+                        @endif
+                    </summary>
 
-                <div class="avatar-dropdown" id="avatarDropdown">
-                    <div class="dropdown-profile-card">
-                        <div class="avatar-icon">
-                            @if($vendor->photo)
-                                <img src="{{ Storage::url($vendor->photo) }}" alt="Vendor">
-                            @else
-                                {{ substr($vendor->first_name ?? 'V', 0, 1) }}
-                            @endif
-                        </div>
-                        <div>
-                            <strong>{{ $vendor->first_name ?? 'Vendor' }} {{ $vendor->last_name ?? '' }}</strong>
-                            <span>{{ $vendor->email ?? '' }}</span>
-                        </div>
+                    <div class="avatar-dropdown">
+                        @include('partials.vendor-profile-dropdown')
                     </div>
-                    <a href="{{ route('vendor.section', 'edit-profile') }}" class="dropdown-link">
-                        Edit Profile
-                    </a>
-                    <a href="{{ route('vendor.section', 'change-password') }}" class="dropdown-link">
-                        Change Password
-                    </a>
-
-                    <form action="{{ route('vendor.logout') }}" method="POST" class="dropdown-logout-form">
-                        @csrf
-                        <button type="submit" class="dropdown-link">
-                            Logout
-                        </button>
-                    </form>
-                </div>
+                </details>
             </div>
         </div>
 
@@ -1269,15 +1266,15 @@
                    <span class="nav-text">Dashboard</span>
                 </a>
                 
-                <details class="nav-group" {{ in_array($currentSection, ['manage-properties', 'property-enquiries', 'choose-property-type', 'add-property']) ? 'open' : '' }}>
-                    <summary class="nav-item nav-toggle {{ in_array($currentSection, ['manage-properties', 'property-enquiries', 'choose-property-type', 'add-property']) ? 'group-active' : '' }}">
+                <details class="nav-group" {{ in_array($currentSection, ['manage-properties', 'property-enquiries', 'choose-property-type', 'add-property', 'edit-property']) ? 'open' : '' }}>
+                    <summary class="nav-item nav-toggle {{ in_array($currentSection, ['manage-properties', 'property-enquiries', 'choose-property-type', 'add-property', 'edit-property']) ? 'group-active' : '' }}">
                        <span class="nav-text">Property Management</span>
                     </summary>
                     <div class="nav-children">
                         <a href="{{ route('vendor.section', 'choose-property-type') }}" class="nav-subitem {{ in_array($currentSection, ['choose-property-type', 'add-property']) ? 'active' : '' }}">
                             <i class="fas fa-plus"></i> Add Property
                         </a>
-                        <a href="{{ route('vendor.section', 'manage-properties') }}" class="nav-subitem {{ $currentSection === 'manage-properties' ? 'active' : '' }}">
+                        <a href="{{ route('vendor.section', 'manage-properties') }}" class="nav-subitem {{ in_array($currentSection, ['manage-properties', 'edit-property']) ? 'active' : '' }}">
                             <i class="fas fa-list"></i> Manage Property
                         </a>
                         <a href="{{ route('vendor.section', 'property-enquiries') }}" class="nav-subitem {{ $currentSection === 'property-enquiries' ? 'active' : '' }}">
@@ -1315,6 +1312,8 @@
                     <div style="font-weight: 500; font-size: 18px;">Dashboard</div>
                 @elseif ($currentSection === 'manage-properties')
                     <div style="font-weight: 500; font-size: 18px;">Manage Properties</div>
+                @elseif ($currentSection === 'edit-property')
+                    <div style="font-weight: 500; font-size: 18px;">Edit Property</div>
                 @elseif ($currentSection === 'property-enquiries')
                     <div style="font-weight: 500; font-size: 18px;">Property Enquiries</div>
                 @elseif ($currentSection === 'edit-profile')
@@ -1373,8 +1372,9 @@
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <select id="managePropertyTypeFilter" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; outline: none;">
                                 <option value="all">All Types</option>
-                                <option value="residential">Residential</option>
-                                <option value="commercial">Commercial</option>
+                                <option value="residential">Villa</option>
+                                <option value="commercial">Plot</option>
+                                <option value="commercial">Apartment</option>
                             </select>
                             <input type="text" id="managePropertySearch" placeholder="Search by name or location..." style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; width: 250px; outline: none;">
                         </div>
@@ -1417,10 +1417,10 @@
                                         </td>
                                         <td>
                                             <div class="action-box">
-                                                <a href="#" class="btn-action" title="Edit">
-                                                    <i class="far fa-edit"></i>
+                                                <a href="{{ route('vendor.property.edit', ['propertyId' => $prop->id]) }}" class="btn-action btn-edit" title="Edit">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                                 </a>
-                                                <form action="#" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this property?')">
+                                                <form action="{{ route('vendor.property.destroy', ['propertyId' => $prop->id]) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this property?')">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn-action" style="background: none; border: none; cursor: pointer; color: #ef4444;" title="Delete">
@@ -1495,7 +1495,7 @@
                         <div class="profile-preview-card">
                             <div class="profile-preview-avatar">
                                 @if($vendor->photo)
-                                    <img src="{{ Storage::url($vendor->photo) }}" alt="Vendor Photo">
+                                    <img src="{{ \App\Support\MediaPath::url($vendor->photo) }}" alt="Vendor Photo">
                                 @else
                                     <img src="https://ui-avatars.com/api/?name={{ urlencode($vendor->first_name . ' ' . $vendor->last_name) }}&background=1877F2&color=fff&size=120" alt="Vendor Photo">
                                 @endif
@@ -1746,6 +1746,7 @@
 
                 @elseif ($currentSection === 'add-property')
                     <div class="add-property-wrap">
+                        <!-- ...existing code... -->
                         <div class="add-property-head">
                             <div>
                                 <h2 class="add-property-title">{{ ucfirst($selectedPropertyType ?? 'property') }} Property</h2>
@@ -1789,6 +1790,7 @@
                                             <div class="gallery-preview-row" id="galleryPreviewContainer">
                                                 <label for="propertyGalleryImages" class="gallery-add-card">+</label>
                                             </div>
+                                            <div class="media-selection-summary" id="gallerySelectionSummary">No gallery images selected.</div>
                                             <input type="file" id="propertyGalleryImages" name="gallery_images[]" accept="image/png, image/jpeg, image/jpg, image/avif" multiple hidden required>
                                         </div>
                                          <div class="property-field media-block" style="grid-column: span 6;">
@@ -1798,6 +1800,7 @@
                                                 <span class="upload-title">Upload primary display image</span><br>
                                                 <span class="upload-meta">PNG, JPG up to 2 MB · This appears on listings</span>
                                             </label>
+                                            <div class="media-selection-summary" id="displayImageSelectionSummary">No display image selected.</div>
                                             <input type="file" id="propertyDisplayImage" name="display_image" accept="image/png, image/jpeg, image/jpg, image/avif" hidden required>
                                         </div>
                                          <div class="property-field media-block" style="grid-column: span 6;">
@@ -1810,6 +1813,7 @@
                                             <div class="gallery-preview-row" id="floorPlanPreviewContainer">
                                                 <label for="propertyFloorPlanImages" class="gallery-add-card">+</label>
                                             </div>
+                                            <div class="media-selection-summary" id="floorPlanSelectionSummary">No floor plan images selected.</div>
                                             <input type="file" id="propertyFloorPlanImages" name="floor_plan_images[]" accept="image/png, image/jpeg, image/jpg, image/avif" multiple hidden>
                                         </div>
                                     </div>
@@ -1839,6 +1843,18 @@
                                                 <option value="0" {{ (string) old('status', '1') === '0' ? 'selected' : '' }}>Inactive</option>
                                             </select>
                                         </div>
+                                        {{-- <div class="property-field col-3">
+                                            <label for="propertyNewLaunched" style="display:flex; align-items:center; gap:8px; margin-top:28px;">
+                                                <input type="checkbox" id="propertyNewLaunched" name="new_launched" value="yes" {{ old('new_launched') === 'yes' ? 'checked' : '' }} style="width:auto;">
+                                                New Launch
+                                            </label>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyEliteProject" style="display:flex; align-items:center; gap:8px; margin-top:28px;">
+                                                <input type="checkbox" id="propertyEliteProject" name="elite_project" value="yes" {{ old('elite_project') === 'yes' ? 'checked' : '' }} style="width:auto;">
+                                                Elite Project
+                                            </label>
+                                        </div> --}}
                                         <div class="property-field col-6">
                                             <label for="propertyConstructionStatus">Construction Status <span class="required-star">*</span></label>
                                             <select id="propertyConstructionStatus" name="construction_status" required>
@@ -1865,8 +1881,8 @@
                                             <label for="propertyTopPicks">Top Picks (Categories)</label>
                                             <div class="multi-select-wrapper">
                                                 <div id="selectedTopPicksDisplay" class="selected-chips-area"></div>
-                                                <input type="text" id="topPicksSearch" placeholder="Search & select multiple (e.g. Best Deals)..." style="border:none; padding:5px; width:100%; outline:none;">
-                                                <select id="propertyTopPicks" name="top_picks[]" multiple size="5" class="multi-select-toggle" style="margin-top:10px;">
+                                        
+                                                <select id="propertyTopPicks" name="top_picks[]" multiple size="6" class="multi-select-toggle" style="width:100%; display:block; margin-top:10px;">
                                                     @php
                                                         $currentTopPicks = collect(old('top_picks', []))->map(fn($id) => (string)$id)->all();
                                                     @endphp
@@ -1880,28 +1896,13 @@
                                             <label>Amenities <span class="required-star">*</span></label>
                                             <div class="multi-select-wrapper" id="amenitiesWrapper" style="position: relative;">
                                                 <div id="selectedAmenitiesDisplay" class="selected-chips-area"></div>
-                                                <div class="search-input-container" style="position: relative; display: flex; align-items: center; border: 1px solid #dfe5ee; border-radius: 8px; background: #fff; padding: 4px 10px;">
-                                                    <i class="fas fa-search" style="color: #94a3b8; margin-right: 8px;"></i>
-                                                    <input type="text" id="propertyAmenitySearch" placeholder="Search amenities..." style="border:none; padding:8px 0; width:100%; outline:none; font-size:14px; background:transparent;">
-                                                </div>
-                                                
-                                                <!-- Custom dropdown scrollable list with checkboxes -->
-                                                <div class="amenities-dropdown-list" id="amenitiesDropdownList">
-                                                    @php
-                                                        $selectedAmenityIds = collect(old('amenity_ids', []))->map(fn ($id) => (string) $id)->all();
-                                                    @endphp
+                                               
+                                                @php
+                                                    $selectedAmenityIds = collect(old('amenity_ids', []))->map(fn ($id) => (string) $id)->all();
+                                                @endphp
+                                                <select id="propertyAmenitiesSelect" name="amenity_ids[]" multiple size="8" class="multi-select-toggle" style="width:100%; display:block;" required>
                                                     @foreach (($amenities ?? []) as $amenity)
-                                                        <div class="amenities-dropdown-item" data-id="{{ $amenity->id }}" data-name="{{ strtolower($amenity->name ?? '') }}">
-                                                            <input type="checkbox" id="amenity_check_{{ $amenity->id }}" value="{{ $amenity->id }}" {{ in_array((string) $amenity->id, $selectedAmenityIds, true) ? 'checked' : '' }}>
-                                                            <label for="amenity_check_{{ $amenity->id }}">{{ $amenity->name }}</label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-
-                                                <!-- Hidden select to submit values -->
-                                                <select id="propertyAmenitiesSelect" name="amenity_ids[]" multiple style="display: none;" required>
-                                                    @foreach (($amenities ?? []) as $amenity)
-                                                        <option value="{{ $amenity->id }}" {{ in_array((string) $amenity->id, $selectedAmenityIds, true) ? 'selected' : '' }}>{{ $amenity->name }}</option>
+                                                        <option data-name="{{ strtolower($amenity->name ?? '') }}" value="{{ $amenity->id }}" {{ in_array((string) $amenity->id, $selectedAmenityIds, true) ? 'selected' : '' }}>{{ $amenity->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -1911,76 +1912,21 @@
                                             <label style="margin-bottom: 12px; display: block;">No. of BHK</label>
                                             @php
                                                 $selectedBhkValues = collect(old('bhk', []))->map(fn ($value) => (string) $value)->all();
+                                                $availableBhkOptions = $bhkOptions ?? ['1 BHK', '2 BHK', '3 BHK', '4 BHK', '5+ BHK'];
                                             @endphp
-                                            <div class="bhk-toggle-group" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                                @foreach(['1 BHK', '2 BHK', '3 BHK', '4 BHK', '5+ BHK'] as $bhkOption)
-                                                    <button type="button" class="bhk-toggle-btn {{ in_array($bhkOption, $selectedBhkValues, true) ? 'active' : '' }}" data-value="{{ $bhkOption }}">
-                                                        {{ $bhkOption }}
-                                                    </button>
-                                                @endforeach
-                                            </div>
-                                            <!-- Hidden select to submit values -->
-                                            <select id="propertyBhk" name="bhk[]" multiple style="display: none;">
-                                                @foreach(['1 BHK', '2 BHK', '3 BHK', '4 BHK', '5+ BHK'] as $bhkOption)
+                                            <div id="selectedBhkDisplay" class="selected-chips-area"></div>
+                                            
+                                            <select id="propertyBhk" name="bhk[]" multiple size="6" class="multi-select-toggle" style="width:100%; display:block;">
+                                                @foreach($availableBhkOptions as $bhkOption)
                                                     <option value="{{ $bhkOption }}" {{ in_array($bhkOption, $selectedBhkValues, true) ? 'selected' : '' }}>{{ $bhkOption }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
                                         @endif
-                                        <div class="property-field col-6">
-                                            <label>Area (Sq.Ft) Range</label>
-                                            <div style="display:flex; gap:10px;">
-                                                <input type="number" name="min_area" placeholder="Min" value="{{ old('min_area') }}">
-                                                <input type="number" name="max_area" placeholder="Max" value="{{ old('max_area') }}">
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
-
-                                <!-- Pricing Section -->
-                                <div class="property-form-card property-pricing-theme">
-                                    <h3 class="section-marker-title">Pricing & Brochure (INR)</h3>
-                                    <p class="section-marker-note">At least one price (min or max) is required. Both can be filled for a price range.</p>
-                                    <div class="property-form-grid">
-                                        <div class="property-field col-6">
-                                            <label for="propertyMinPrice">Min Price (₹) <span class="required-star">*</span></label>
-                                            <input type="number" id="propertyMinPrice" name="min_price" placeholder="e.g. 5000000" value="{{ old('min_price') }}">
-                                            <div class="hint" style="font-size:11px; color:var(--text-gray); margin-top:4px;">Leave blank if not applicable</div>
-                                        </div>
-                                        <div class="property-field col-6">
-                                            <label for="propertyMaxPrice">Max Price (₹) <span class="required-star">*</span></label>
-                                            <input type="number" id="propertyMaxPrice" name="max_price" placeholder="e.g. 15000000" value="{{ old('max_price') }}">
-                                            <div class="hint" style="font-size:11px; color:var(--text-gray); margin-top:4px;">Leave blank if not applicable</div>
-                                        </div>
-                                        <div class="property-field col-12" style="margin-top: 4px;">
-                                            <h3 class="section-marker-title" style="font-size: 16px; margin-bottom: 6px;">Area Details</h3>
-                                            <p class="section-marker-note" style="margin-bottom: 0;">Fill total area, or a min/max range - at least one is required.</p>
-                                        </div>
-                                        <div class="property-field col-4">
-                                            <label for="propertyArea">Area (sqft)</label>
-                                            <input type="number" id="propertyArea" name="area" placeholder="e.g. 1200" value="{{ old('area') }}">
-                                        </div>
-                                        <div class="property-field col-4">
-                                            <label for="propertyMinArea">Min Area (sqft)</label>
-                                            <input type="number" id="propertyMinArea" name="min_area" placeholder="e.g. 900" value="{{ old('min_area') }}">
-                                        </div>
-                                        <div class="property-field col-4">
-                                            <label for="propertyMaxArea">Max Area (sqft)</label>
-                                            <input type="number" id="propertyMaxArea" name="max_area" placeholder="e.g. 1800" value="{{ old('max_area') }}">
-                                        </div>
-                                        <div class="property-field col-12">
-                                            <label for="propertyBrochure">Brochure <span class="required-star">*</span></label>
-                                            <label class="upload-panel" for="propertyBrochure" id="brochureUploadArea" style="border: 2px dashed #dfe5ee; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
-                                                <span class="upload-title" style="font-size: 13px; font-weight: 700; color: var(--text-dark);">Upload property brochure (Mandatory)</span>
-                                                <span class="upload-meta" style="font-size: 11px; color: var(--text-gray);">PDF format required up to 10MB</span>
-                                            </label>
-                                            <input type="file" id="propertyBrochure" name="brochure" accept=".pdf" hidden required>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <!-- Location Section -->
-                                <div class="property-form-card property-location-theme">
+                                 <div class="property-form-card property-location-theme">
                                     <h3>Location Details</h3>
                                     <p>Country, state, city, location and pincode will auto fill after Address selected.</p>
                                     <div class="property-form-grid">
@@ -2079,6 +2025,65 @@
                                         </div>
                                     </div>
                                 </div>
+{{--                                 
+                                <div class="property-form-card property-location-theme">
+                                    <h3 class="section-marker-title">Location</h3>
+                                    <div class="property-form-grid">
+                                        <div class="property-field col-6">
+                                            <label for="propertyAddress">Address <span class="required-star">*</span></label>
+                                            <input type="text" id="propertyAddress" name="address" placeholder="Enter property address" value="{{ old('address') }}">
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyCity">City <span class="required-star">*</span></label>
+                                            <input type="text" id="propertyCity" name="city" placeholder="Enter city" value="{{ old('city') }}">
+                                        </div>
+                                    </div>
+                                </div> --}}
+
+                                <!-- Pricing Section -->
+                                <div class="property-form-card property-pricing-theme">
+                                    <h3 class="section-marker-title">Pricing & Brochure (INR)</h3>
+                                    <p class="section-marker-note">At least one price (min or max) is required. Both can be filled for a price range.</p>
+                                    <div class="property-form-grid">
+                                        <div class="property-field col-6">
+                                            <label for="propertyMinPrice">Min Price (₹) <span class="required-star">*</span></label>
+                                            <input type="number" id="propertyMinPrice" name="min_price" placeholder="e.g. 5000000" value="{{ old('min_price') }}">
+                                            <div class="hint" style="font-size:11px; color:var(--text-gray); margin-top:4px;">Leave blank if not applicable</div>
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyMaxPrice">Max Price (₹) <span class="required-star">*</span></label>
+                                            <input type="number" id="propertyMaxPrice" name="max_price" placeholder="e.g. 15000000" value="{{ old('max_price') }}">
+                                            <div class="hint" style="font-size:11px; color:var(--text-gray); margin-top:4px;">Leave blank if not applicable</div>
+                                        </div>
+                                        <div class="property-field col-12" style="margin-top: 4px;">
+                                            <h3 class="section-marker-title" style="font-size: 16px; margin-bottom: 6px;">Area Details</h3>
+                                            <p class="section-marker-note" style="margin-bottom: 0;">Fill total area, or a min/max range - at least one is required.</p>
+                                        </div>
+                                        <div class="property-field col-4">
+                                            <label for="propertyArea">Area (sqft)</label>
+                                            <input type="number" id="propertyArea" name="area" placeholder="e.g. 1200" value="{{ old('area') }}">
+                                        </div>
+                                        <div class="property-field col-4">
+                                            <label for="propertyMinArea">Min Area (sqft)</label>
+                                            <input type="number" id="propertyMinArea" name="min_area" placeholder="e.g. 900" value="{{ old('min_area') }}">
+                                        </div>
+                                        <div class="property-field col-4">
+                                            <label for="propertyMaxArea">Max Area (sqft)</label>
+                                            <input type="number" id="propertyMaxArea" name="max_area" placeholder="e.g. 1800" value="{{ old('max_area') }}">
+                                        </div>
+                                        <div class="property-field col-12">
+                                            <label for="propertyBrochure">Brochure <span class="required-star">*</span></label>
+                                            <label class="upload-panel" for="propertyBrochure" id="brochureUploadArea" style="border: 2px dashed #dfe5ee; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                                                <span class="upload-title" style="font-size: 13px; font-weight: 700; color: var(--text-dark);">Upload property brochure (Mandatory)</span>
+                                                <span class="upload-meta" style="font-size: 11px; color: var(--text-gray);">PDF format required up to 10MB</span>
+                                            </label>
+                                            <input type="file" id="propertyBrochure" name="brochure" accept=".pdf" hidden required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                               
+                               
 
                                 <!-- Content Section -->
                                 <div class="property-form-card property-content-theme">
@@ -2091,9 +2096,9 @@
                                         <div class="property-field" style="grid-column: span 12;">
                                             <label for="propertyHighlights">Highlights <span class="required-star">*</span></label>
                                             <div class="property-rich-toolbar" style="margin-bottom: 5px; display: flex; gap: 8px; font-size: 11px; color: var(--text-gray); cursor: pointer; user-select: none;">
-                                                <span title="Bold" style="font-weight:700; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">B</span>
-                                                <span title="Underline" style="text-decoration:underline; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">U</span>
-                                                <span title="Italic" style="font-style:italic; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">I</span>
+                                                <span role="button" tabindex="0" class="highlight-format-btn" data-before="&lt;strong&gt;" data-after="&lt;/strong&gt;" title="Bold" style="font-weight:700; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">B</span>
+                                                <span role="button" tabindex="0" class="highlight-format-btn" data-before="&lt;u&gt;" data-after="&lt;/u&gt;" title="Underline" style="text-decoration:underline; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">U</span>
+                                                <span role="button" tabindex="0" class="highlight-format-btn" data-before="&lt;em&gt;" data-after="&lt;/em&gt;" title="Italic" style="font-style:italic; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">I</span>
                                             </div>
                                             <textarea id="propertyHighlights" name="highlights" placeholder="Enter highlights here..." required style="min-height: 120px;">{{ old('highlights') }}</textarea>
                                         </div>
@@ -2134,6 +2139,408 @@
                         </form>
                     </div>
 
+                @elseif ($currentSection === 'edit-property')
+                    <div class="add-property-wrap">
+                        <div class="add-property-head">
+                            <div>
+                                <h2 class="add-property-title">Edit Property</h2>
+                                <p class="add-property-subtitle">Update the listing with media, pricing, address, amenities and more.</p>
+                            </div>
+                            <a href="{{ route('vendor.section', 'manage-properties') }}" class="add-property-back">
+                                <span>&larr;</span>
+                                <span>Back to Manage Properties</span>
+                            </a>
+                        </div>
+
+                        @php
+                            $p = $property ?? null;
+                            $countryId = $p && $p->country ? \App\Models\Country::where('name', $p->country)->value('id') : null;
+                            $stateId = $p && $p->state ? \App\Models\State::where('name', $p->state)->value('id') : null;
+                            $cityId = $p && $p->city ? \App\Models\City::where('name', $p->city)->value('id') : null;
+                            $selectedAmenityIds = collect(old('amenity_ids', []))->map(fn($id)=>(string)$id)->all();
+                            if (empty($selectedAmenityIds) && $p) {
+                                if (\Illuminate\Support\Facades\DB::getSchemaBuilder()->hasTable('property_amenities')) {
+                                    $selectedAmenityIds = \Illuminate\Support\Facades\DB::table('property_amenities')->where('property_id', $p->id)->pluck('amenity_id')->map(fn($v)=>(string)$v)->all();
+                                }
+                            }
+                            $selectedBhkValues = collect(old('bhk', []))->map(fn($v)=>(string)$v)->all();
+                            if (empty($selectedBhkValues) && $p && $p->bhk) {
+                                $decoded = json_decode($p->bhk, true);
+                                if (is_array($decoded)) $selectedBhkValues = array_map(fn($v)=>(string)$v, $decoded);
+                            }
+                        @endphp
+
+                        <form id="editPropertyForm" class="add-property-form" method="POST" enctype="multipart/form-data" action="{{ route('vendor.property.update', ['propertyId' => $p->id ?? 0]) }}">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="property_type" value="{{ old('property_type', $p->type ?? 'residential') }}">
+
+                            @if ($errors->any())
+                                <div style="margin-bottom:16px; border:1px solid #fecaca; background:#fef2f2; color:#991b1b; border-radius:6px; padding:12px 14px;">
+                                    <strong style="display:block; margin-bottom:6px;">Please fix these errors:</strong>
+                                    <ul style="margin:0; padding-left:18px;">
+                                        @foreach ($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
+                            <div class="property-form-grid">
+                                <!-- Media Section (kept minimal - files can be re-uploaded) -->
+                                <div class="property-form-card">
+                                    <h3>Property Media</h3>
+                                    <div class="property-form-grid">
+                                        <div class="property-field media-block" style="grid-column: span 12;">
+                                            <label class="media-title">Gallery Images</label>
+                                            <div class="gallery-preview-row" id="galleryPreviewContainer">
+                                                @if($p && \Illuminate\Support\Facades\DB::getSchemaBuilder()->hasTable('property_slider_images'))
+                                                    @php $slides = \Illuminate\Support\Facades\DB::table('property_slider_images')->where('property_id', $p->id)->get(); @endphp
+                                                    @foreach($slides as $s)
+                                                        <div style="width:90px; height:60px; border-radius:6px; overflow:hidden; border:1px solid #e5e7eb; display:inline-block; margin-right:8px; background:#fff;">
+                                                            <img src="{{ \App\Support\MediaPath::url($s->path ?? $s->image ?? '') }}" style="width:100%; height:100%; object-fit:cover;" />
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                                <label for="propertyGalleryImages" class="gallery-add-card">+</label>
+                                            </div>
+                                            <div class="media-selection-summary">Upload new images to replace or add to gallery.</div>
+                                            <input type="file" id="propertyGalleryImages" name="gallery_images[]" accept="image/png, image/jpeg, image/jpg, image/avif" multiple hidden>
+                                        </div>
+                                        <div class="property-field media-block" style="grid-column: span 6;">
+                                            <label class="media-title">Display Image (Cover)</label>
+                                            <div class="media-selection-summary">
+                                                @if($p && ($p->display_image || $p->main_property_image))
+                                                    <img src="{{ \App\Support\MediaPath::url($p->display_image ?? $p->main_property_image) }}" alt="cover" style="max-width:120px; max-height:80px; border-radius:8px; border:1px solid #e5e7eb;" />
+                                                @else
+                                                    No display image.
+                                                @endif
+                                            </div>
+                                            <input type="file" id="propertyDisplayImage" name="display_image" accept="image/png, image/jpeg, image/jpg, image/avif" hidden>
+                                        </div>
+                                        <div class="property-field media-block" style="grid-column: span 6;">
+                                            <label class="media-title">Floor Plans</label>
+                                            <div class="gallery-preview-row" id="floorPlanPreviewContainer">
+                                                @if($p && \Illuminate\Support\Facades\DB::getSchemaBuilder()->hasTable('property_floor_plan'))
+                                                    @php $plans = \Illuminate\Support\Facades\DB::table('property_floor_plan')->where('property_id', $p->id)->get(); @endphp
+                                                    @foreach($plans as $plan)
+                                                        <div style="width:90px; height:60px; border-radius:6px; overflow:hidden; border:1px solid #e5e7eb; display:inline-block; margin-right:8px; background:#fff;">
+                                                            <img src="{{ \App\Support\MediaPath::url($plan->path ?? $plan->image ?? '') }}" style="width:100%; height:100%; object-fit:cover;" />
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                                <label for="propertyFloorPlanImages" class="gallery-add-card">+</label>
+                                            </div>
+                                            <input type="file" id="propertyFloorPlanImages" name="floor_plan_images[]" accept="image/png, image/jpeg, image/jpg, image/avif" multiple hidden>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Info Section -->
+                                <div class="property-form-card property-info-theme">
+                                    <h3>Property Information</h3>
+                                    <div class="property-form-grid">
+                                        <div class="property-field col-6">
+                                            <label for="propertyName">Property Name <span class="required-star">*</span></label>
+                                            <input type="text" id="propertyName" name="property_name" placeholder="e.g. Prestige Heights" value="{{ old('property_name', $p->property_name ?? '') }}" required>
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyCategory">Category <span class="required-star">*</span></label>
+                                            <select id="propertyCategory" name="category_id" required>
+                                                <option value="">Select category</option>
+                                                @foreach ($categories ?? [] as $category)
+                                                    <option value="{{ $category->id }}" {{ (string) old('category_id', $p->category_id ?? '') === (string) $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyStatus">Status <span class="required-star">*</span></label>
+                                            <select id="propertyStatus" name="status" required>
+                                                <option value="1" {{ (string) old('status', $p->status ?? '1') === '1' ? 'selected' : '' }}>Active</option>
+                                                <option value="0" {{ (string) old('status', $p->status ?? '1') === '0' ? 'selected' : '' }}>Inactive</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="property-field col-6">
+                                            <label for="propertyConstructionStatus">Construction Status <span class="required-star">*</span></label>
+                                            <select id="propertyConstructionStatus" name="construction_status" required>
+                                                <option value="">Select status</option>
+                                                <option value="Ready to Move" {{ old('construction_status', $p->construction_status ?? '') == 'Ready to Move' ? 'selected' : '' }}>Ready to Move</option>
+                                                <option value="Under Construction" {{ old('construction_status', $p->construction_status ?? '') == 'Under Construction' ? 'selected' : '' }}>Under Construction</option>
+                                                <option value="New Launch" {{ old('construction_status', $p->construction_status ?? '') == 'New Launch' ? 'selected' : '' }}>New Launch</option>
+                                            </select>
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyPossessionDate">Possession Date</label>
+                                            <input type="date" id="propertyPossessionDate" name="possession_date" value="{{ old('possession_date', optional($p)->possession_date) }}">
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyFurnishedStatus">Furnished Status <span class="required-star">*</span></label>
+                                            <select id="propertyFurnishedStatus" name="furnished_status" required>
+                                                <option value="">Select</option>
+                                                <option value="Furnished" {{ old('furnished_status', $p->furnished_status ?? '') == 'Furnished' ? 'selected' : '' }}>Furnished</option>
+                                                <option value="Semi-furnished" {{ old('furnished_status', $p->furnished_status ?? '') == 'Semi-furnished' ? 'selected' : '' }}>Semi-furnished</option>
+                                                <option value="Unfurnished" {{ old('furnished_status', $p->furnished_status ?? '') == 'Unfurnished' ? 'selected' : '' }}>Unfurnished</option>
+                                            </select>
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyTopPicks">Top Picks (Categories)</label>
+                                            <div class="multi-select-wrapper">
+                                                <div id="selectedTopPicksDisplay" class="selected-chips-area"></div>
+                                                <select id="propertyTopPicks" name="top_picks[]" multiple size="6" class="multi-select-toggle" style="width:100%; display:block; margin-top:10px;">
+                                                    @php
+                                                        $currentTopPicks = collect(old('top_picks', []))->map(fn($id) => (string)$id)->all();
+                                                        if (empty($currentTopPicks) && $p) {
+                                                            if (\Illuminate\Support\Facades\DB::getSchemaBuilder()->hasTable('property_top_picks')) {
+                                                                $topPickColumn = \Illuminate\Support\Facades\DB::getSchemaBuilder()->hasColumn('property_top_picks', 'top_picks_id')
+                                                                    ? 'top_picks_id'
+                                                                    : (\Illuminate\Support\Facades\DB::getSchemaBuilder()->hasColumn('property_top_picks', 'top_pick_id') ? 'top_pick_id' : null);
+
+                                                                if ($topPickColumn) {
+                                                                    $currentTopPicks = \Illuminate\Support\Facades\DB::table('property_top_picks')
+                                                                        ->where('property_id', $p->id)
+                                                                        ->pluck($topPickColumn)
+                                                                        ->map(fn($v)=>(string)$v)
+                                                                        ->all();
+                                                                }
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @foreach($topPicksCategories ?? [] as $tp)
+                                                        <option class="top-pick-option" data-name="{{ strtolower($tp->name ?? '') }}" value="{{ $tp->id }}" {{ in_array((string)$tp->id, $currentTopPicks, true) ? 'selected' : '' }}>{{ $tp->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label>Amenities <span class="required-star">*</span></label>
+                                            <div class="multi-select-wrapper" id="amenitiesWrapper" style="position: relative;">
+                                                <div id="selectedAmenitiesDisplay" class="selected-chips-area"></div>
+                                                <select id="propertyAmenitiesSelect" name="amenity_ids[]" multiple size="8" class="multi-select-toggle" style="width:100%; display:block;" required>
+                                                    @foreach (($amenities ?? []) as $amenity)
+                                                        <option data-name="{{ strtolower($amenity->name ?? '') }}" value="{{ $amenity->id }}" {{ in_array((string) $amenity->id, $selectedAmenityIds, true) ? 'selected' : '' }}>{{ $amenity->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        @if(($p->type ?? 'residential') === 'residential')
+                                        <div class="property-field col-6">
+                                            <label style="margin-bottom: 12px; display: block;">No. of BHK</label>
+                                            <div id="selectedBhkDisplay" class="selected-chips-area"></div>
+                                            <select id="propertyBhk" name="bhk[]" multiple size="6" class="multi-select-toggle" style="width:100%; display:block;">
+                                                @foreach($bhkOptions ?? ['1 BHK', '2 BHK', '3 BHK', '4 BHK', '5+ BHK'] as $bhkOption)
+                                                    <option value="{{ $bhkOption }}" {{ in_array((string)$bhkOption, $selectedBhkValues, true) ? 'selected' : '' }}>{{ $bhkOption }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <!-- Location Section -->
+                                 <div class="property-form-card property-location-theme">
+                                    <h3>Location Details</h3>
+                                    <p>Country, state, city, location and pincode will auto fill after Address selected.</p>
+                                    <div class="property-form-grid">
+                                        <div class="property-field" style="grid-column: span 12;">
+                                            <label for="propertyFullAddress">Full Address <span class="required-star">*</span></label>
+                                            <input type="text" id="propertyFullAddress" name="full_address" placeholder="Select or enter full address to auto-fill location fields" value="{{ old('full_address', $p->full_address ?? '') }}" required>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyCountry">Country *</label>
+                                            <select id="propertyCountry" name="country_id" required>
+                                                <option value="">Select country</option>
+                                                @foreach (($countries ?? []) as $country)
+                                                    <option value="{{ $country->id }}" {{ (string) old('country_id', $countryId ?? '') === (string) $country->id ? 'selected' : '' }}>{{ $country->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyState">State *</label>
+                                            <select id="propertyState" name="state_id" required>
+                                                <option value="">Select state</option>
+                                                @foreach (($states ?? []) as $state)
+                                                    <option value="{{ $state->id }}" data-country="{{ $state->country_id ?? '' }}" {{ (string) old('state_id', $stateId ?? '') === (string) $state->id ? 'selected' : '' }}>{{ $state->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyCity">City *</label>
+                                            <select id="propertyCity" name="city_id" required>
+                                                <option value="">Select city</option>
+                                                @foreach (($cities ?? []) as $city)
+                                                    <option value="{{ $city->id }}" data-state="{{ $city->state_id ?? '' }}" {{ (string) old('city_id', $cityId ?? '') === (string) $city->id ? 'selected' : '' }}>{{ $city->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyLocation">Location Area *</label>
+                                            <select id="propertyLocation" name="property_place_id" required>
+                                                <option value="">Select location</option>
+                                                @foreach (($propertyPlaces ?? []) as $place)
+                                                    <option value="{{ $place->id }}" data-country="{{ $place->country_id ?? '' }}" data-state="{{ $place->state_id ?? '' }}" data-city="{{ $place->city_id ?? '' }}" {{ (string) old('property_place_id', $propertyPlaceId ?? ($p->property_place_id ?? '')) === (string) $place->id ? 'selected' : '' }}>{{ $place->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyPincode">Pincode *</label>
+                                            <input type="text" id="propertyPincode" name="pincode" placeholder="Enter pincode" value="{{ old('pincode', $p->pincode ?? '') }}" required>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyLatitude">Latitude *</label>
+                                            <input type="text" id="propertyLatitude" name="latitude" placeholder="e.g. 13.0827" value="{{ old('latitude', $p->latitude ?? '') }}" required>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyLongitude">Longitude *</label>
+                                            <input type="text" id="propertyLongitude" name="longitude" placeholder="e.g. 80.2707" value="{{ old('longitude', $p->longitude ?? '') }}" required>
+                                        </div>
+                                        <div class="property-field col-3">
+                                            <label for="propertyMapSelected">Map Selected</label>
+                                            <input type="text" id="propertyMapSelected" name="map_selected" placeholder="Map URL auto-fills from coordinates" value="{{ old('map_selected', $propertyContent->meta_description ?? ($p->map_selected ?? '')) }}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="property-form-card" style="grid-column: span 12;">
+                                    <h3 class="section-marker-title">Map Selection</h3>
+                                    <div class="map-select-wrap" style="border: 1px solid #dfe5ee; border-radius: 8px; min-height: 120px; background: #f8fafc; display: flex; align-items: center; justify-content: center; text-align: center;">
+                                        <a id="propertyMapPreview" href="#" target="_blank" class="map-select-trigger" style="display:flex; flex-direction:column; align-items:center; gap:8px; text-decoration:none; color:var(--text-dark);" title="Open selected location on map">
+                                            <span class="map-select-icon" style="width: 40px; height: 40px; border-radius: 50%; background: #eff6ff; color: #1877F2; display: flex; align-items: center; justify-content: center;">
+                                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M12 21s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11z"></path>
+                                                    <circle cx="12" cy="10" r="2.5"></circle>
+                                                </svg>
+                                            </span>
+                                            <span class="map-select-title" style="font-weight: 600;">Click to Pick Location on Google Maps</span>
+                                            <span class="map-select-note" style="font-size: 11px; color: var(--text-gray);">Pin drops will auto-fill lat, long and address</span>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div id="propertyMapPickerModal" class="map-picker-modal" aria-hidden="true" style="position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
+                                    <div class="map-picker-card" role="dialog" aria-modal="true" aria-labelledby="mapPickerTitle" style="width: 90%; max-width: 800px; background: #fff; border-radius: 12px; overflow: hidden;">
+                                        <div class="map-picker-head" style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                                            <h4 id="mapPickerTitle" class="map-picker-title" style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-dark);">Pick Property Location (Google Maps)</h4>
+                                            <button type="button" id="mapPickerCloseBtn" class="map-picker-close" aria-label="Close map picker" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-gray);">&times;</button>
+                                        </div>
+                                        <div class="map-picker-search" style="padding: 12px 20px; border-bottom: 1px solid #eee;">
+                                            <input type="text" id="propertyMapSearchInput" placeholder="Search location..." style="width: 100%; border: 1px solid #dfe5ee; padding: 10px 14px; border-radius: 8px; font-size: 13px;">
+                                        </div>
+                                        <div id="propertyGoogleMapCanvas" style="width: 100%; height: 400px; background: #e2e8f0;"></div>
+                                        <div class="map-picker-foot" style="padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                            <span id="mapPickerStatus" class="map-picker-status" style="font-size: 12px; color: var(--text-gray);">Click on map to place pin.</span>
+                                            <div class="map-picker-actions" style="display: flex; gap: 10px;">
+                                                <button type="button" id="mapPickerCancelBtn" class="map-picker-btn secondary" style="padding: 8px 16px; border-radius: 6px; border: 1px solid #dfe5ee; background: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">Cancel</button>
+                                                <button type="button" id="mapPickerUseBtn" class="map-picker-btn primary" style="padding: 8px 16px; border-radius: 6px; border: none; background: #1877F2; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">Use This Location</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="property-form-card property-pricing-theme">
+                                    <h3 class="section-marker-title">Pricing & Brochure (INR)</h3>
+                                    <p class="section-marker-note">At least one price (min or max) is required. Both can be filled for a price range.</p>
+                                    <div class="property-form-grid">
+                                        <div class="property-field col-6">
+                                            <label for="propertyMinPrice">Min Price (Rs) <span class="required-star">*</span></label>
+                                            <input type="number" id="propertyMinPrice" name="min_price" placeholder="e.g. 5000000" value="{{ old('min_price', $p->min_price ?? '') }}">
+                                            <div class="hint" style="font-size:11px; color:var(--text-gray); margin-top:4px;">Leave blank if not applicable</div>
+                                        </div>
+                                        <div class="property-field col-6">
+                                            <label for="propertyMaxPrice">Max Price (Rs) <span class="required-star">*</span></label>
+                                            <input type="number" id="propertyMaxPrice" name="max_price" placeholder="e.g. 15000000" value="{{ old('max_price', $p->max_price ?? '') }}">
+                                            <div class="hint" style="font-size:11px; color:var(--text-gray); margin-top:4px;">Leave blank if not applicable</div>
+                                        </div>
+                                        <div class="property-field col-12" style="margin-top: 4px;">
+                                            <h3 class="section-marker-title" style="font-size: 16px; margin-bottom: 6px;">Area Details</h3>
+                                            <p class="section-marker-note" style="margin-bottom: 0;">Fill total area, or a min/max range - at least one is required.</p>
+                                        </div>
+                                        <div class="property-field col-4">
+                                            <label for="propertyArea">Area (sqft)</label>
+                                            <input type="number" id="propertyArea" name="area" placeholder="e.g. 1200" value="{{ old('area', $p->area ?? '') }}">
+                                        </div>
+                                        <div class="property-field col-4">
+                                            <label for="propertyMinArea">Min Area (sqft)</label>
+                                            <input type="number" id="propertyMinArea" name="min_area" placeholder="e.g. 900" value="{{ old('min_area', $p->min_area ?? '') }}">
+                                        </div>
+                                        <div class="property-field col-4">
+                                            <label for="propertyMaxArea">Max Area (sqft)</label>
+                                            <input type="number" id="propertyMaxArea" name="max_area" placeholder="e.g. 1800" value="{{ old('max_area', $p->max_area ?? '') }}">
+                                        </div>
+                                        <div class="property-field col-12">
+                                            <label for="propertyBrochure">Brochure <span class="required-star">*</span></label>
+                                            <label class="upload-panel" for="propertyBrochure" id="brochureUploadArea" style="border: 2px dashed #dfe5ee; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+                                                @if($p && !empty($p->brochure))
+                                                    <div style="position: relative; display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                                        <span style="font-size: 13px; font-weight: 600; color: #334155;">{{ basename($p->brochure) }}</span>
+                                                        <div class="remove-img-btn" id="removeExistingBrochure">&times;</div>
+                                                    </div>
+                                                @else
+                                                    <span class="upload-title" style="font-size: 13px; font-weight: 700; color: var(--text-dark);">Upload property brochure</span>
+                                                    <span class="upload-meta" style="font-size: 11px; color: var(--text-gray);">PDF format required up to 10MB</span>
+                                                @endif
+                                            </label>
+                                            <input type="file" id="propertyBrochure" name="brochure" accept=".pdf" hidden>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="property-form-card property-content-theme">
+                                    <h3>Content & RERA</h3>
+                                    <div class="property-form-grid">
+                                        <div class="property-field" style="grid-column: span 12;">
+                                            <label for="propertyOverview">Overview <span class="required-star">*</span></label>
+                                            <textarea id="propertyOverview" name="overview" placeholder="Write a compelling overview..." required style="min-height: 100px;">{{ old('overview', $p->overview ?? ($propertyContent->description ?? '')) }}</textarea>
+                                        </div>
+                                        <div class="property-field" style="grid-column: span 12;">
+                                            <label for="propertyHighlights">Highlights <span class="required-star">*</span></label>
+                                            <div class="property-rich-toolbar" style="margin-bottom: 5px; display: flex; gap: 8px; font-size: 11px; color: var(--text-gray); cursor: pointer; user-select: none;">
+                                                <span role="button" tabindex="0" class="highlight-format-btn" data-before="&lt;strong&gt;" data-after="&lt;/strong&gt;" title="Bold" style="font-weight:700; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">B</span>
+                                                <span role="button" tabindex="0" class="highlight-format-btn" data-before="&lt;u&gt;" data-after="&lt;/u&gt;" title="Underline" style="text-decoration:underline; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">U</span>
+                                                <span role="button" tabindex="0" class="highlight-format-btn" data-before="&lt;em&gt;" data-after="&lt;/em&gt;" title="Italic" style="font-style:italic; padding:2px 6px; border:1px solid #dfe5ee; border-radius:4px; background:#f8fafc;">I</span>
+                                            </div>
+                                            <textarea id="propertyHighlights" name="highlights" placeholder="Enter highlights here..." required style="min-height: 120px;">{{ old('highlights', $p->highlights ?? '') }}</textarea>
+                                        </div>
+                                        <div class="property-field" style="grid-column: span 12;">
+                                            <label for="propertyAboutProject">About Project <span class="required-star">*</span></label>
+                                            <textarea id="propertyAboutProject" name="about_project" placeholder="Detailed project and builder info..." required style="min-height: 100px;">{{ old('about_project', $p->about_project ?? '') }}</textarea>
+                                        </div>
+                                        <div class="property-field" style="grid-column: span 12;">
+                                            <label for="propertyReraNumber">Rera Number</label>
+                                            <input type="text" id="propertyReraNumber" name="rera_number" placeholder="Enter RERA registration number" value="{{ old('rera_number', $propertyContent->meta_keyword ?? '') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="property-form-card property-faq-theme">
+                                    <h3>Frequently Asked Questions</h3>
+                                    <p>Add up to 25 FAQs for this project.</p>
+                                    @php
+                                        $faqRows = old('faqs', collect($propertyFaqs ?? [])->map(fn ($faq) => ['question' => $faq->question ?? '', 'answer' => $faq->answer ?? ''])->all());
+                                        if (empty($faqRows)) {
+                                            $faqRows = [['question' => '', 'answer' => '']];
+                                        }
+                                    @endphp
+                                    <div id="propertyFaqList">
+                                        @foreach ($faqRows as $faqIndex => $faqRow)
+                                            <div class="faq-item" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; margin-bottom: 12px;">
+                                                <div class="property-field"><label>Question {{ $faqIndex + 1 }}</label><input type="text" name="faqs[{{ $faqIndex }}][question]" value="{{ $faqRow['question'] ?? '' }}" placeholder="Enter question"></div>
+                                                <div class="property-field"><label>Answer {{ $faqIndex + 1 }}</label><input type="text" name="faqs[{{ $faqIndex }}][answer]" value="{{ $faqRow['answer'] ?? '' }}" placeholder="Enter answer"></div>
+                                                <button type="button" class="faq-remove-btn" style="padding: 0 18px; background: #fee2e2; color: #ef4444; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease; height: 42px; margin-top: 25px; {{ $faqIndex === 0 ? 'visibility:hidden;' : '' }}">Remove</button>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <button type="button" class="faq-add-btn" id="addPropertyFaqBtn" style="border: none; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.3s ease; padding: 10px 14px; background: #1d73d8; color: #fff;">+ Add FAQ</button>
+                                </div>
+
+                                <div class="property-form-field" style="grid-column: span 12; margin-top:12px;">
+                                    <button type="submit" class="property-save-btn">Update Property</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
                 @elseif ($currentSection === 'change-password')
                <h1 class="welcome-title">Change Password</h1>
                     <div class="form-container">
@@ -2166,6 +2573,36 @@
     </div>
 
     <script>
+        // CSRF token for AJAX
+        const _csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        // Attach change handlers to inline status selects
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.property-status-select').forEach(function (sel) {
+                sel.addEventListener('change', function (e) {
+                    const id = this.dataset.id;
+                    const value = this.value;
+                    // optimistic UI handled by inline onchange style on select
+                    fetch(`{{ url('/vendor/property') }}/${id}/partial`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': _csrf,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ status: value })
+                    }).then(r => r.json()).then(data => {
+                        if (data.error || data.errors) {
+                            alert('Failed to update status');
+                        }
+                    }).catch(() => {
+                        alert('Failed to update status');
+                    });
+                });
+            });
+        });
+    </script>
+    <script>
         function toggleDropdown(id) {
             const dropdown = document.getElementById(id);
             dropdown.classList.toggle('show');
@@ -2190,6 +2627,11 @@
             if (avatar && dropdown && !avatar.contains(event.target) && !dropdown.contains(event.target)) {
                 dropdown.classList.remove('show');
             }
+
+            // Close native <details> avatar dropdowns when clicking outside
+            document.querySelectorAll('details.avatar-details[open]').forEach(function(d) {
+                if (!d.contains(event.target)) d.removeAttribute('open');
+            });
         });
 
         // Manage Properties Filtering Logic
@@ -2235,6 +2677,7 @@
             const propertyPincode = document.getElementById('propertyPincode');
             const propertyLatitude = document.getElementById('propertyLatitude');
             const propertyLongitude = document.getElementById('propertyLongitude');
+            const propertyMapSelected = document.getElementById('propertyMapSelected');
             const propertyMapPreview = document.getElementById('propertyMapPreview');
             const propertyMapPickerModal = document.getElementById('propertyMapPickerModal');
             const propertyGoogleMapCanvas = document.getElementById('propertyGoogleMapCanvas');
@@ -2269,6 +2712,18 @@
                 const selectedText = (select) => select.value ? (select.options[select.selectedIndex]?.text || '') : '';
                 const normalizeText = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
                 const tokenize = (value) => normalizeText(value).replace(/[^a-z0-9 ]/g, ' ').split(' ').filter(Boolean);
+                const updateMapSelectedUrl = () => {
+                    const lat = propertyLatitude.value.trim();
+                    const lng = propertyLongitude.value.trim();
+                    const hasCoords = lat !== '' && lng !== '';
+                    const mapUrl = hasCoords ? `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}` : '';
+
+                    if (propertyMapSelected) propertyMapSelected.value = mapUrl;
+                    if (propertyMapPreview) {
+                        propertyMapPreview.href = mapUrl || '#';
+                        propertyMapPreview.target = mapUrl ? '_blank' : '';
+                    }
+                };
                 
                 const setSelectByLabel = (select, label, fuzzy = true) => {
                     const wanted = normalizeText(label);
@@ -2324,7 +2779,9 @@
                         selectedText(propertyCountry),
                         propertyPincode.value.trim(),
                     ].filter(Boolean);
-                    // propertyFullAddress.value = parts.join(', '); // We only update if explicitly wanted
+                    if (parts.length) {
+                        propertyFullAddress.value = parts.join(', ');
+                    }
                 };
 
                 const geocodeWithNominatim = async (address) => {
@@ -2340,15 +2797,17 @@
                     const addr = result.address || {};
                     const country = addr.country || '';
                     const state = addr.state || addr.state_district || '';
-                    const city = addr.city || addr.town || addr.village || addr.county || '';
+                    const city = addr.city || addr.town || addr.village || addr.county || addr.city_district || '';
                     const pin = addr.postcode || '';
-                    const loc = addr.suburb || addr.neighbourhood || addr.quarter || addr.road || '';
+                    const loc = addr.suburb || addr.neighbourhood || addr.quarter || addr.road || addr.hamlet || addr.locality || '';
 
                     if (country && setSelectByLabel(propertyCountry, country)) syncStates();
                     if (state && setSelectByLabel(propertyState, state)) syncCities();
                     if (city && setSelectByLabel(propertyCity, city)) syncLocations();
-                    if (loc) setSelectByLabel(propertyLocation, loc);
+                    const locationMatched = loc ? setSelectByLabel(propertyLocation, loc) : false;
+                    if (!locationMatched && result.display_name) setSelectByLabel(propertyLocation, result.display_name);
                     if (pin) propertyPincode.value = pin;
+                    if (result.display_name) propertyFullAddress.value = result.display_name;
                 };
 
                 const applyAddressToFields = async (forceGeocode = false) => {
@@ -2368,6 +2827,7 @@
                                     if (result.geometry?.location) {
                                         propertyLatitude.value = Number(result.geometry.location.lat()).toFixed(6);
                                         propertyLongitude.value = Number(result.geometry.location.lng()).toFixed(6);
+                                        updateMapSelectedUrl();
                                     }
                                     applyGeocodeToAddressFields(result);
                                     lastAutoGeocodedAddress = normalizeText(raw);
@@ -2378,6 +2838,7 @@
                                     if (fb) {
                                         propertyLatitude.value = Number(fb.lat).toFixed(6);
                                         propertyLongitude.value = Number(fb.lon).toFixed(6);
+                                        updateMapSelectedUrl();
                                         applyNominatimToAddressFields(fb);
                                         lastAutoGeocodedAddress = normalizeText(raw);
                                     }
@@ -2393,6 +2854,7 @@
                             if (fb) {
                                 propertyLatitude.value = Number(fb.lat).toFixed(6);
                                 propertyLongitude.value = Number(fb.lon).toFixed(6);
+                                updateMapSelectedUrl();
                                 applyNominatimToAddressFields(fb);
                                 lastAutoGeocodedAddress = normalizeText(raw);
                                 return;
@@ -2443,6 +2905,7 @@
                             if (place.geometry?.location) {
                                 propertyLatitude.value = Number(place.geometry.location.lat()).toFixed(6);
                                 propertyLongitude.value = Number(place.geometry.location.lng()).toFixed(6);
+                                updateMapSelectedUrl();
                             }
                             if (place.address_components?.length) {
                                 applyGeocodeToAddressFields({
@@ -2461,15 +2924,17 @@
                     const findC = (t) => result.address_components?.find(c => (c.types || []).includes(t));
                     const country = findC('country')?.long_name || '';
                     const state = findC('administrative_area_level_1')?.long_name || '';
-                    const city = findC('locality')?.long_name || findC('administrative_area_level_2')?.long_name || '';
+                    const city = findC('locality')?.long_name || findC('postal_town')?.long_name || findC('administrative_area_level_3')?.long_name || findC('administrative_area_level_2')?.long_name || '';
                     const pin = findC('postal_code')?.long_name || '';
-                    const loc = findC('sublocality_level_1')?.long_name || findC('sublocality')?.long_name || findC('neighborhood')?.long_name || findC('route')?.long_name || '';
+                    const loc = findC('sublocality_level_2')?.long_name || findC('sublocality_level_1')?.long_name || findC('sublocality')?.long_name || findC('neighborhood')?.long_name || findC('premise')?.long_name || findC('route')?.long_name || '';
 
                     if (country && setSelectByLabel(propertyCountry, country)) syncStates();
                     if (state && setSelectByLabel(propertyState, state)) syncCities();
                     if (city && setSelectByLabel(propertyCity, city)) syncLocations();
-                    if (loc) setSelectByLabel(propertyLocation, loc);
+                    const locationMatched = loc ? setSelectByLabel(propertyLocation, loc) : false;
+                    if (!locationMatched && result.formatted_address) setSelectByLabel(propertyLocation, result.formatted_address);
                     if (pin) propertyPincode.value = pin;
+                    if (result.formatted_address) propertyFullAddress.value = result.formatted_address;
                 };
 
                 const setMapMarkerAndCoords = (latLng, mapsApi, doGeocode = true) => {
@@ -2482,20 +2947,31 @@
                     mapPickerState.map.panTo(latLng);
                     propertyLatitude.value = Number(latLng.lat()).toFixed(6);
                     propertyLongitude.value = Number(latLng.lng()).toFixed(6);
+                    updateMapSelectedUrl();
                     if (doGeocode && mapPickerState.geocoder) {
                         mapPickerState.geocoder.geocode({ location: latLng }, (res, status) => {
-                            if (status === 'OK' && res?.[0]) applyGeocodeToAddressFields(res[0]);
+                            if (status === 'OK' && res?.[0]) {
+                                applyGeocodeToAddressFields(res[0]);
+                            }
                         });
                     }
                 };
 
-                const closeMapPicker = () => { propertyMapPickerModal?.classList.remove('is-open'); };
+                const closeMapPicker = () => {
+                    propertyMapPickerModal?.classList.remove('is-open');
+                    if (propertyMapPickerModal) {
+                        propertyMapPickerModal.style.display = 'none';
+                        propertyMapPickerModal.setAttribute('aria-hidden', 'true');
+                    }
+                };
 
                 const openMapPicker = async () => {
                     if (!propertyMapPickerModal || !propertyGoogleMapCanvas) return;
                     try {
                         const mapsApi = await loadGoogleMapsApi();
                         propertyMapPickerModal.classList.add('is-open');
+                        propertyMapPickerModal.style.display = 'flex';
+                        propertyMapPickerModal.setAttribute('aria-hidden', 'false');
                         const hasCoords = propertyLatitude.value.trim() && propertyLongitude.value.trim();
                         const initialLat = hasCoords ? Number(propertyLatitude.value) : 20.5937;
                         const initialLng = hasCoords ? Number(propertyLongitude.value) : 78.9629;
@@ -2554,9 +3030,22 @@
                     if (propertyLocation.selectedOptions[0]?.hidden) propertyLocation.value = '';
                 };
 
-                propertyCountry.addEventListener('change', syncStates);
-                propertyState.addEventListener('change', syncCities);
-                propertyCity.addEventListener('change', syncLocations);
+                propertyCountry.addEventListener('change', () => {
+                    syncStates();
+                    updateAddress();
+                });
+                propertyState.addEventListener('change', () => {
+                    syncCities();
+                    updateAddress();
+                });
+                propertyCity.addEventListener('change', () => {
+                    syncLocations();
+                    updateAddress();
+                });
+                propertyLocation.addEventListener('change', updateAddress);
+                propertyPincode.addEventListener('input', updateAddress);
+                propertyLatitude.addEventListener('input', updateMapSelectedUrl);
+                propertyLongitude.addEventListener('input', updateMapSelectedUrl);
                 
                 propertyFullAddress.addEventListener('input', () => {
                     if (addressGeocodeTimer) clearTimeout(addressGeocodeTimer);
@@ -2571,6 +3060,7 @@
                 mapPickerUseBtn?.addEventListener('click', closeMapPicker);
 
                 syncStates();
+                updateMapSelectedUrl();
             }
 
                 // Multi-select logic
@@ -2596,9 +3086,6 @@
                     const select = wrapper.querySelector('select.multi-select-toggle');
                     if (!select) return;
                     
-                    // Avoid binding old handler for custom fields
-                    if (select.id === 'propertyAmenitiesSelect' || select.id === 'propertyBhk') return;
-
                     const displayId = select.id === 'propertyTopPicks' ? 'selectedTopPicksDisplay' : 
                                      (select.id === 'propertyBhk' ? 'selectedBhkDisplay' : 'selectedAmenitiesDisplay');
 
@@ -2632,118 +3119,99 @@
                     });
                 });
 
-                // Custom BHK Toggle Group Logic
-                const bhkToggleButtons = document.querySelectorAll('.bhk-toggle-btn');
                 const bhkSelect = document.getElementById('propertyBhk');
-                if (bhkToggleButtons.length > 0 && bhkSelect) {
-                    bhkToggleButtons.forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            btn.classList.toggle('active');
-                            const val = btn.dataset.value;
-                            const option = Array.from(bhkSelect.options).find(opt => opt.value === val);
-                            if (option) {
-                                option.selected = btn.classList.contains('active');
-                                bhkSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        });
-                    });
-                }
-
-                // Custom Amenities Dropdown Checklist Logic
-                const amenitiesWrapper = document.getElementById('amenitiesWrapper');
-                const amenitySearch = document.getElementById('propertyAmenitySearch');
-                const amenitiesDropdownList = document.getElementById('amenitiesDropdownList');
-                const propertyAmenitiesSelect = document.getElementById('propertyAmenitiesSelect');
-                const selectedAmenitiesDisplay = document.getElementById('selectedAmenitiesDisplay');
-
-                if (amenitiesWrapper && amenitySearch && amenitiesDropdownList && propertyAmenitiesSelect) {
-                    // Show dropdown on focus
-                    amenitySearch.addEventListener('focus', () => {
-                        amenitiesWrapper.classList.add('is-open');
-                    });
-
-                    // Hide dropdown when clicking outside
-                    document.addEventListener('click', (e) => {
-                        if (!amenitiesWrapper.contains(e.target)) {
-                            amenitiesWrapper.classList.remove('is-open');
+                if (bhkSelect) {
+                    updateSelectedDisplay(bhkSelect, 'selectedBhkDisplay');
+                    bhkSelect.addEventListener('change', () => updateSelectedDisplay(bhkSelect, 'selectedBhkDisplay'));
+                    bhkSelect.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        const option = e.target;
+                        if (option.tagName === 'OPTION') {
+                            option.selected = !option.selected;
+                            this.dispatchEvent(new Event('change', { bubbles: true }));
                         }
                     });
 
-                    // Search filter
-                    amenitySearch.addEventListener('input', () => {
-                        amenitiesWrapper.classList.add('is-open');
-                        const term = amenitySearch.value.trim().toLowerCase();
-                        const items = amenitiesDropdownList.querySelectorAll('.amenities-dropdown-item');
-                        items.forEach(item => {
-                            const name = item.dataset.name;
-                            if (name.includes(term)) {
-                                item.style.display = 'flex';
-                            } else {
-                                item.style.display = 'none';
-                            }
-                        });
+                    document.getElementById('selectAllBhk')?.addEventListener('click', () => {
+                        Array.from(bhkSelect.options).forEach(opt => opt.selected = true);
+                        bhkSelect.dispatchEvent(new Event('change', { bubbles: true }));
                     });
 
-                    // Update chips display
-                    const updateAmenitiesChips = () => {
-                        selectedAmenitiesDisplay.innerHTML = '';
-                        const checkedItems = amenitiesDropdownList.querySelectorAll('.amenities-dropdown-item input[type="checkbox"]:checked');
-                        
-                        checkedItems.forEach(chk => {
-                            const id = chk.value;
-                            const labelText = chk.nextElementSibling.innerText;
-                            
-                            const chip = document.createElement('span');
-                            chip.className = 'choice-chip';
-                            chip.innerHTML = `${labelText} <span class="remove-chip" data-id="${id}" title="Remove">&times;</span>`;
-                            
-                            chip.querySelector('.remove-chip').onclick = (e) => {
-                                e.stopPropagation();
-                                chk.checked = false;
-                                // Trigger change event
-                                chk.dispatchEvent(new Event('change', { bubbles: true }));
-                            };
-                            
-                            selectedAmenitiesDisplay.appendChild(chip);
-                        });
-                        
-                        // Sync options of hidden select
-                        Array.from(propertyAmenitiesSelect.options).forEach(opt => {
-                            const checkbox = document.getElementById(`amenity_check_${opt.value}`);
-                            if (checkbox) {
-                                opt.selected = checkbox.checked;
-                            }
-                        });
-                    };
-
-                    // Listen for checkbox changes (direct clicks or custom changes)
-                    amenitiesDropdownList.querySelectorAll('.amenities-dropdown-item input[type="checkbox"]').forEach(chk => {
-                        chk.addEventListener('change', () => {
-                            updateAmenitiesChips();
-                        });
+                    document.getElementById('clearAllBhk')?.addEventListener('click', () => {
+                        Array.from(bhkSelect.options).forEach(opt => opt.selected = false);
+                        bhkSelect.dispatchEvent(new Event('change', { bubbles: true }));
                     });
-
-                    // Make clicking the row toggle the checkbox
-                    amenitiesDropdownList.querySelectorAll('.amenities-dropdown-item').forEach(item => {
-                        item.addEventListener('click', (e) => {
-                            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
-                                const chk = item.querySelector('input[type="checkbox"]');
-                                if (chk) {
-                                    chk.checked = !chk.checked;
-                                    chk.dispatchEvent(new Event('change', { bubbles: true }));
-                                }
-                            }
-                        });
-                    });
-
-                    // Initialize chips on page load
-                    updateAmenitiesChips();
                 }
 
+                const propertyTopPicks = document.getElementById('propertyTopPicks');
+                if (propertyTopPicks) {
+                    document.getElementById('selectAllTopPicks')?.addEventListener('click', () => {
+                        Array.from(propertyTopPicks.options).forEach(opt => opt.selected = true);
+                        propertyTopPicks.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+
+                    document.getElementById('clearAllTopPicks')?.addEventListener('click', () => {
+                        Array.from(propertyTopPicks.options).forEach(opt => opt.selected = false);
+                        propertyTopPicks.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                }
+
+                const propertyAmenitiesSelect = document.getElementById('propertyAmenitiesSelect');
+                if (propertyAmenitiesSelect) {
+                    document.getElementById('selectAllAmenities')?.addEventListener('click', () => {
+                        Array.from(propertyAmenitiesSelect.options).forEach(opt => opt.selected = true);
+                        propertyAmenitiesSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+
+                    document.getElementById('clearAllAmenities')?.addEventListener('click', () => {
+                        Array.from(propertyAmenitiesSelect.options).forEach(opt => opt.selected = false);
+                        propertyAmenitiesSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                }
+
+                document.querySelectorAll('.highlight-format-btn').forEach(button => {
+                    const applyHighlightFormat = () => {
+                        const textarea = document.getElementById('propertyHighlights');
+                        if (!textarea) return;
+
+                        const before = button.dataset.before || '';
+                        const after = button.dataset.after || '';
+                        const start = textarea.selectionStart ?? textarea.value.length;
+                        const end = textarea.selectionEnd ?? textarea.value.length;
+                        const selectedText = textarea.value.slice(start, end) || 'text';
+                        const replacement = `${before}${selectedText}${after}`;
+
+                        textarea.value = textarea.value.slice(0, start) + replacement + textarea.value.slice(end);
+                        textarea.focus();
+                        textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
+                    };
+
+                    button.addEventListener('click', applyHighlightFormat);
+                    button.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            applyHighlightFormat();
+                        }
+                    });
+                });
+
                 // Functionality for Image Previews
+                const setInputFiles = (input, files) => {
+                    if (!input || typeof DataTransfer === 'undefined') return;
+                    const dataTransfer = new DataTransfer();
+                    files.forEach(file => dataTransfer.items.add(file));
+                    input.files = dataTransfer.files;
+                };
+
+                const isImageFile = (file) => file && file.type && file.type.startsWith('image/');
+                const formatFileListSummary = (files, emptyText, singularText, pluralText) => {
+                    if (!files.length) return emptyText;
+                    return `${files.length} ${files.length === 1 ? singularText : pluralText} selected`;
+                };
+
                 const displayImageInput = document.getElementById('propertyDisplayImage');
                 const displayImageUploadArea = document.getElementById('displayImageUploadArea');
+                const displayImageSelectionSummary = document.getElementById('displayImageSelectionSummary');
                 const displayPlaceholderHTML = `
                     <span class="upload-plus">+</span>
                     <span class="upload-title">Upload primary display image</span><br>
@@ -2758,6 +3226,9 @@
                             ev.stopPropagation();
                             if (displayImageInput) displayImageInput.value = '';
                             displayImageUploadArea.innerHTML = displayPlaceholderHTML;
+                            if (displayImageSelectionSummary) {
+                                displayImageSelectionSummary.textContent = 'No display image selected.';
+                            }
                         });
                     }
                 };
@@ -2767,121 +3238,128 @@
                 if (displayImageInput && displayImageUploadArea) {
                     displayImageInput.addEventListener('change', function(e) {
                         const file = e.target.files[0];
-                        if (file) {
+                        if (!file) return;
+
+                        if (!isImageFile(file)) {
+                            displayImageInput.value = '';
+                            if (displayImageSelectionSummary) {
+                                displayImageSelectionSummary.textContent = 'Please select a valid image file.';
+                            }
+                            return;
+                        }
+
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            displayImageUploadArea.innerHTML = `
+                                <div style="position: relative; display: inline-block;">
+                                    <img src="${event.target.result}" style="max-width:100%; max-height:140px; border-radius:4px; object-fit:cover;">
+                                    <div class="remove-img-btn" id="removeSelectedDisplayImage">&times;</div>
+                                </div>
+                            `;
+                            if (displayImageSelectionSummary) {
+                                displayImageSelectionSummary.textContent = file.name;
+                            }
+                            bindRemoveDisplayEvent('removeSelectedDisplayImage');
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                const setupMultiImageUpload = ({ inputId, previewId, summaryId, emptyText, singularText, pluralText }) => {
+                    const input = document.getElementById(inputId);
+                    const previewContainer = document.getElementById(previewId);
+                    const summary = document.getElementById(summaryId);
+                    let selectedFiles = [];
+
+                    if (!input || !previewContainer) return;
+
+                    const updateSummary = () => {
+                        if (summary) {
+                            summary.textContent = formatFileListSummary(selectedFiles, emptyText, singularText, pluralText);
+                        }
+                    };
+
+                    const syncInput = () => {
+                        setInputFiles(input, selectedFiles);
+                        updateSummary();
+                    };
+
+                    const render = () => {
+                        const addCard = previewContainer.querySelector('.gallery-add-card');
+                        previewContainer.querySelectorAll('.gallery-preview-card').forEach(el => el.remove());
+
+                        selectedFiles.forEach((file, index) => {
+                            const card = document.createElement('div');
+                            card.className = 'gallery-preview-card';
+
+                            const removeBtn = document.createElement('button');
+                            removeBtn.type = 'button';
+                            removeBtn.className = 'remove-gallery-img';
+                            removeBtn.innerHTML = '&times;';
+                            removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
+                            removeBtn.addEventListener('click', (event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                selectedFiles.splice(index, 1);
+                                render();
+                                syncInput();
+                            });
+                            card.appendChild(removeBtn);
+
+                            const name = document.createElement('div');
+                            name.className = 'gallery-preview-card-name';
+                            name.textContent = file.name;
+                            card.appendChild(name);
+
                             const reader = new FileReader();
-                            reader.onload = function(event) {
-                                displayImageUploadArea.innerHTML = `
-                                    <div style="position: relative; display: inline-block;">
-                                        <img src="${event.target.result}" style="max-width:100%; max-height:140px; border-radius:4px; object-fit:cover;">
-                                        <div class="remove-img-btn" id="removeSelectedDisplayImage">&times;</div>
-                                    </div>
-                                `;
-                                bindRemoveDisplayEvent('removeSelectedDisplayImage');
+                            reader.onload = (event) => {
+                                card.style.backgroundImage = `url(${event.target.result})`;
                             };
                             reader.readAsDataURL(file);
-                        }
+
+                            previewContainer.insertBefore(card, addCard);
+                        });
+                    };
+
+                    input.addEventListener('change', (event) => {
+                        const incomingFiles = Array.from(event.target.files || []).filter(isImageFile);
+
+                        incomingFiles.forEach(file => {
+                            const alreadySelected = selectedFiles.some(existingFile =>
+                                existingFile.name === file.name &&
+                                existingFile.size === file.size &&
+                                existingFile.lastModified === file.lastModified
+                            );
+
+                            if (!alreadySelected) {
+                                selectedFiles.push(file);
+                            }
+                        });
+
+                        render();
+                        syncInput();
                     });
-                }
 
-                // Gallery preview & syncing
-                let galleryFileList = [];
-                const galleryImagesInput = document.getElementById('propertyGalleryImages');
-                const galleryPreviewContainer = document.getElementById('galleryPreviewContainer');
-
-                const syncGalleryInput = () => {
-                    const dt = new DataTransfer();
-                    galleryFileList.forEach(file => dt.items.add(file));
-                    galleryImagesInput.files = dt.files;
+                    updateSummary();
                 };
 
-                const renderGallery = () => {
-                    const addCard = galleryPreviewContainer.querySelector('.gallery-add-card');
-                    galleryPreviewContainer.querySelectorAll('.gallery-preview-card').forEach(el => el.remove());
+                setupMultiImageUpload({
+                    inputId: 'propertyGalleryImages',
+                    previewId: 'galleryPreviewContainer',
+                    summaryId: 'gallerySelectionSummary',
+                    emptyText: 'No gallery images selected.',
+                    singularText: 'gallery image',
+                    pluralText: 'gallery images',
+                });
 
-                    galleryFileList.forEach((file, index) => {
-                        const card = document.createElement('div');
-                        card.className = 'gallery-preview-card';
-                        
-                        const removeBtn = document.createElement('div');
-                        removeBtn.className = 'remove-gallery-img';
-                        removeBtn.innerHTML = '&times;';
-                        removeBtn.onclick = (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            galleryFileList.splice(index, 1);
-                            renderGallery();
-                            syncGalleryInput();
-                        };
-                        card.appendChild(removeBtn);
-
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            card.style.backgroundImage = `url(${event.target.result})`;
-                            card.style.backgroundSize = 'cover';
-                            card.style.backgroundPosition = 'center';
-                        };
-                        reader.readAsDataURL(file);
-                        galleryPreviewContainer.insertBefore(card, addCard);
-                    });
-                };
-
-                if (galleryImagesInput && galleryPreviewContainer) {
-                    galleryImagesInput.addEventListener('change', function(e) {
-                        galleryFileList = [...galleryFileList, ...Array.from(e.target.files)];
-                        renderGallery();
-                        syncGalleryInput();
-                    });
-                }
-
-                // Floor Plan preview & syncing
-                let floorPlanFileList = [];
-                const floorPlanImagesInput = document.getElementById('propertyFloorPlanImages');
-                const floorPlanPreviewContainer = document.getElementById('floorPlanPreviewContainer');
-
-                const syncFloorPlanInput = () => {
-                    const dt = new DataTransfer();
-                    floorPlanFileList.forEach(file => dt.items.add(file));
-                    floorPlanImagesInput.files = dt.files;
-                };
-
-                const renderFloorPlanGallery = () => {
-                    const addCard = floorPlanPreviewContainer.querySelector('.gallery-add-card');
-                    floorPlanPreviewContainer.querySelectorAll('.gallery-preview-card').forEach(el => el.remove());
-
-                    floorPlanFileList.forEach((file, index) => {
-                        const card = document.createElement('div');
-                        card.className = 'gallery-preview-card';
-                        
-                        const removeBtn = document.createElement('div');
-                        removeBtn.className = 'remove-gallery-img';
-                        removeBtn.innerHTML = '&times;';
-                        removeBtn.onclick = (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            floorPlanFileList.splice(index, 1);
-                            renderFloorPlanGallery();
-                            syncFloorPlanInput();
-                        };
-                        card.appendChild(removeBtn);
-
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            card.style.backgroundImage = `url(${event.target.result})`;
-                            card.style.backgroundSize = 'cover';
-                            card.style.backgroundPosition = 'center';
-                        };
-                        reader.readAsDataURL(file);
-                        floorPlanPreviewContainer.insertBefore(card, addCard);
-                    });
-                };
-
-                if (floorPlanImagesInput && floorPlanPreviewContainer) {
-                    floorPlanImagesInput.addEventListener('change', function(e) {
-                        floorPlanFileList = [...floorPlanFileList, ...Array.from(e.target.files)];
-                        renderFloorPlanGallery();
-                        syncFloorPlanInput();
-                    });
-                }
+                setupMultiImageUpload({
+                    inputId: 'propertyFloorPlanImages',
+                    previewId: 'floorPlanPreviewContainer',
+                    summaryId: 'floorPlanSelectionSummary',
+                    emptyText: 'No floor plan images selected.',
+                    singularText: 'floor plan image',
+                    pluralText: 'floor plan images',
+                });
 
                 // Brochure Upload Functionality
                 const brochureInput = document.getElementById('propertyBrochure');
@@ -2964,8 +3442,31 @@
                 }
             }
         });
+
+        
     </script>
 </body>
+    <!-- jQuery (required for Select2) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#propertyBhk').select2({
+                placeholder: 'Search BHK...',
+                tags: false,
+                width: '100%'
+            });
+            $('#propertyTopPicks').select2({
+                placeholder: 'Search & select multiple (e.g. Best Deals)...',
+                tags: false,
+                width: '100%'
+            });
+            $('#propertyAmenitiesSelect').select2({
+                placeholder: 'Search amenities...',
+                tags: false,
+                width: '100%'
+            });
+        });
+    </script>
 </html>
-
-

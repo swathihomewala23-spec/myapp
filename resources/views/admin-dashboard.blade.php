@@ -1360,7 +1360,7 @@
                                         elseif (str_contains($slug, 'setting') || str_contains($slug, 'config')) $subIcon = 'fa-cog';
                                     @endphp
                                     <a
-                                        class="nav-subitem {{ ($currentPage === $item['slug'] || (in_array($currentPage, ['add-vendor', 'vendor-detail', 'vendor-edit', 'vendor-password'], true) && $item['slug'] === 'registered-vendors')) ? 'active' : '' }}"
+                                        class="nav-subitem {{ ($currentPage === $item['slug'] || (in_array($currentPage, ['add-vendor', 'vendor-detail', 'vendor-edit', 'vendor-password'], true) && $item['slug'] === 'registered-vendors') || (in_array($currentPage, ['add-user', 'edit-user'], true) && $item['slug'] === 'registered-users')) ? 'active' : '' }}"
                                         href="{{ route('admin.section', [ 'section' => $item['slug']]) }}"
                                     >
                                         {{ $item['label'] }}
@@ -1441,10 +1441,6 @@
                     @if ($currentPage === 'dashboard')
                         <div class="stats-grid">
                             @foreach ($stats as $stat)
-                                @php
-                                    $isDown = str_contains($stat['change'], 'Down');
-                                @endphp
-
                                 <a href="{{ route('admin.section', ['section' => $stat['slug']]) }}" class="stat-card">
                                     <div class="stat-top">
                                         <div>
@@ -1485,22 +1481,14 @@
                                         </div>
                                     </div>
 
-                                    <div class="trend {{ $isDown ? 'down' : 'up' }}">
-                                        @if ($isDown)
-                                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="m4 7 7 7 4-4 5 5"/>
-                                                <path d="M20 15v-5h-5"/>
-                                            </svg>
-                                        @else
-                                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                <path d="m4 17 7-7 4 4 5-5"/>
-                                                <path d="M20 9V4h-5"/>
-                                            </svg>
-                                        @endif
+                                    <div class="trend up">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3Z"/>
+                                        </svg>
 
                                         <span>
-                                            <strong>{{ strtok($stat['change'], ' ') }}</strong>
-                                            {{ substr($stat['change'], strlen(strtok($stat['change'], ' '))) }}
+                                            <strong>{{ $stat['change'] }}</strong>
+                                            based on total
                                         </span>
                                     </div>
                                 </a>
@@ -1641,7 +1629,7 @@
                                             </div>
                                             @php
                                                 $profileImage = $user->profile_image
-                                                    ? (str_starts_with($user->profile_image, 'http') ? $user->profile_image : asset('storage/' . $user->profile_image))
+                                                    ? \App\Support\MediaPath::url($user->profile_image)
                                                     : 'https://via.placeholder.com/140x140?text=Upload';
                                             @endphp
                                             <div class="profile-image-preview">
@@ -1833,12 +1821,15 @@
                     @elseif ($currentPage === 'add-vendor')
                         @include('admin-add-vendor-section')
 
+                    @elseif (in_array($currentPage, ['add-user', 'edit-user'], true))
+                        @include('admin-user-form-section')
+
                     @elseif ($currentPage === 'vendor-edit')
                         @php
                             $vendorName = $vendor->display_name ?? trim(($vendor->first_name ?? '') . ' ' . ($vendor->last_name ?? ''));
                             $vendorName = trim((string) $vendorName) !== '' ? $vendorName : 'Unnamed Vendor';
                             $vendorPhoto = $vendor->photo ?? null;
-                            $vendorPhotoUrl = $vendorPhoto ? (str_contains($vendorPhoto, '/') ? asset('storage/' . ltrim($vendorPhoto, '/')) : asset('assets/images/vendors/' . $vendorPhoto)) : null;
+                            $vendorPhotoUrl = $vendorPhoto ? \App\Support\MediaPath::url($vendorPhoto, 'storage/public/vendor_photos') : null;
                         @endphp
                         <style>
                             .vendor-form-page { padding: 30px; background: #f8fafc; min-height: 100vh; }
@@ -2054,7 +2045,7 @@
                                             <span class="image-box-label">Website Logo</span>
                                             <div class="image-preview-wrapper">
                                                 @if($settings->website_logo && file_exists(public_path('storage/' . $settings->website_logo)))
-                                                    <img src="{{ asset('storage/' . $settings->website_logo) }}" alt="Logo" id="logoPreview">
+                                                    <img src="{{ \App\Support\MediaPath::url($settings->website_logo) }}" alt="Logo" id="logoPreview">
                                                 @else
                                                     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'%3E%3Crect fill='%23f3f4f6' width='200' height='60'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='14' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3ELogo%3C/text%3E%3C/svg%3E" alt="Logo placeholder">
                                                 @endif
@@ -2071,7 +2062,7 @@
                                             <span class="image-box-label">Website Favicon</span>
                                             <div class="image-preview-wrapper">
                                                 @if($settings->website_favicon && file_exists(public_path('storage/' . $settings->website_favicon)))
-                                                    <img src="{{ asset('storage/' . $settings->website_favicon) }}" alt="Favicon" id="faviconPreview">
+                                                    <img src="{{ \App\Support\MediaPath::url($settings->website_favicon) }}" alt="Favicon" id="faviconPreview">
                                                 @else
                                                     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%23f3f4f6' width='32' height='32'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='10' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3EIcon%3C/text%3E%3C/svg%3E" alt="Favicon placeholder">
                                                 @endif
@@ -2187,41 +2178,327 @@
                             </div>
 
                             <style>
-                                .vendor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
-                                .vendor-card { 
-                                    background: hsl(0, 5%, 83%); border-radius: 24px; padding: 24px; text-align: center;
-                                    box-shadow: 0 4px 20px rgba(0,0,0,0.02); border: 1px solid #f1f5f9;
-                                    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
-                                    position: relative; overflow: hidden;
-                                }
-                                .vendor-card:hover { transform: translateY(-8px); box-shadow: 0 12px 30px rgba(0,0,0,0.06); }
-                                .vendor-card-main { display: block; padding: 16px 0 12px; text-decoration: none; color: inherit; }
-                                .vendor-logo-wrap {
-                                    width: 100px; height: 100px; margin: 0 auto 20px; border-radius: 50%;
-                                    background: #f8fafc; display: flex; align-items: center; justify-content: center;
-                                    border: 4px solid #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-                                }
-                                .vendor-logo-wrap img { width: 70%; height: 70%; object-fit: contain; }
-                                .vendor-name { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
-                                .vendor-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-                                .vendor-card-actions form { margin: 0; }
-                                .vendor-action-btn { border: 0; border-radius: 6px; padding: 8px 10px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; min-height: 34px; }
-                                .vendor-card-actions .vendor-action-btn { width: 100%; }
-                                .vendor-action-btn.login { background: #dcfce7; color: #166534; }
-                                .vendor-action-btn.edit { background: #dbeafe; color: #1d4ed8; }
-                                .vendor-action-btn.password { background: #fef3c7; color: #92400e; }
-                                .vendor-action-btn.delete { background: #fee2e2; color: #991b1b; }
-                                
-                                @media (max-width: 1200px) {
-                                    .vendor-grid { grid-template-columns: repeat(3, 1fr); }
-                                }
-                                @media (max-width: 900px) {
-                                    .vendor-grid { grid-template-columns: repeat(2, 1fr); }
-                                }
-                                @media (max-width: 600px) {
-                                    .vendor-grid { grid-template-columns: 1fr; }
-                                }
-                            </style>
+    *{
+        font-family:'Poppins',sans-serif;
+    }
+
+    .vendors-section{
+        background:linear-gradient(135deg,#f8fbff,#eef4ff);
+        min-height:100vh;
+        animation:pageFade .7s ease;
+    }
+
+    .vendors-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:28px !important;
+        flex-wrap:wrap;
+        gap:15px;
+    }
+
+    .vendors-title{
+        font-size:2rem !important;
+        font-weight:800 !important;
+        color:#0f172a !important;
+        margin:0;
+        position:relative;
+        letter-spacing:-0.5px;
+    }
+
+    .vendors-title::after{
+        content:'';
+        position:absolute;
+        left:0;
+        bottom:-10px;
+        width:75px;
+        height:4px;
+        border-radius:20px;
+        background:linear-gradient(90deg,#2563eb,#60a5fa);
+    }
+
+    .btn-add-member{
+        background:linear-gradient(135deg,#2563eb,#3b82f6) !important;
+        color:#fff !important;
+        text-decoration:none;
+        padding:12px 22px !important;
+        border-radius:14px !important;
+        font-weight:600 !important;
+        font-size:0.92rem !important;
+        transition:all .35s ease !important;
+        box-shadow:0 10px 25px rgba(37,99,235,.18);
+    }
+
+    .btn-add-member:hover{
+        transform:translateY(-4px);
+        box-shadow:0 18px 35px rgba(37,99,235,.25);
+    }
+
+    /* GRID */
+    .vendor-grid{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:28px;
+    }
+
+    /* CARD */
+    .vendor-card{ 
+        background:rgba(255, 255, 255, 0.88);
+        backdrop-filter:blur(12px);
+        border-radius:28px;
+        padding:26px 22px;
+        text-align:center;
+        border:1px solid rgba(255,255,255,0.7);
+        box-shadow:
+            0 10px 30px rgba(15,23,42,0.05),
+            0 4px 12px rgba(15,23,42,0.03);
+        transition:all .45s cubic-bezier(.34,1.56,.64,1);
+        position:relative;
+        overflow:hidden;
+        animation:cardFade .7s ease;
+    }
+
+    .vendor-card::before{
+        content:'';
+        position:absolute;
+        top:0;
+        left:-120%;
+        width:100%;
+        height:100%;
+        background:linear-gradient(
+            120deg,
+            transparent,
+            rgba(255,255,255,.55),
+            transparent
+        );
+        transition:.8s ease;
+    }
+
+    .vendor-card:hover::before{
+        left:120%;
+    }
+
+    .vendor-card:hover{
+        transform:translateY(-10px) scale(1.02);
+        box-shadow:
+            0 22px 40px rgba(37,99,235,0.12),
+            0 8px 18px rgba(15,23,42,0.06);
+        border-color:#dbeafe;
+    }
+
+    .vendor-card-main{
+        display:block;
+        padding:14px 0 12px;
+        text-decoration:none;
+        color:inherit;
+    }
+
+    /* LOGO */
+    .vendor-logo-wrap{
+        width:110px;
+        height:110px;
+        margin:0 auto 22px;
+        border-radius:50%;
+        background:linear-gradient(135deg,#f8fbff,#dbeafe);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border:5px solid #fff;
+        box-shadow:
+            0 10px 25px rgba(37,99,235,.12),
+            inset 0 2px 8px rgba(255,255,255,.8);
+        overflow:hidden;
+        transition:all .4s ease;
+    }
+
+    .vendor-card:hover .vendor-logo-wrap{
+        transform:scale(1.08) rotate(3deg);
+    }
+
+    .vendor-logo-wrap img{
+        width:72%;
+        height:72%;
+        object-fit:cover;
+        border-radius:50%;
+    }
+
+    /* NAME */
+    .vendor-name{
+        font-size:1.05rem !important;
+        font-weight:700 !important;
+        color:#0f172a !important;
+        margin-bottom:8px !important;
+        transition:.3s ease;
+    }
+
+    .vendor-card:hover .vendor-name{
+        color:#2563eb !important;
+    }
+
+    /* ACTION BUTTONS */
+    .vendor-card-actions{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:10px;
+        margin-top:18px;
+    }
+
+    .vendor-card-actions form{
+        margin:0;
+    }
+
+    .vendor-action-btn{
+        border:0;
+        border-radius:12px;
+        padding:10px 12px;
+        font-size:12px;
+        font-weight:700;
+        cursor:pointer;
+        text-decoration:none;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:40px;
+        width:100%;
+        transition:all .3s ease;
+        letter-spacing:.2px;
+    }
+
+    .vendor-action-btn:hover{
+        transform:translateY(-3px);
+        box-shadow:0 10px 18px rgba(0,0,0,.08);
+    }
+
+    .vendor-action-btn.login{
+        background:#dcfce7;
+        color:#166534;
+    }
+
+    .vendor-action-btn.edit{
+        background:#dbeafe;
+        color:#1d4ed8;
+    }
+
+    .vendor-action-btn.password{
+        background:#fef3c7;
+        color:#92400e;
+    }
+
+    .vendor-action-btn.delete{
+        background:#fee2e2;
+        color:#991b1b;
+    }
+
+    .vendor-pagination{
+        flex-wrap:nowrap;
+        gap:20px;
+    }
+
+    .vendor-pagination .pagination-info{
+        white-space:nowrap;
+        flex-shrink:0;
+    }
+
+    .vendor-pagination .pagination-controls{
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        overflow-y:hidden;
+        margin-left:auto;
+        padding-bottom:2px;
+    }
+
+    /* EMPTY STATE */
+    .empty-vendor{
+        grid-column:1/-1;
+        text-align:center;
+        padding:90px 30px;
+        background:#fff;
+        border-radius:28px;
+        border:2px dashed #cbd5e1;
+        animation:fadeIn .6s ease;
+    }
+
+    .empty-vendor h3{
+        color:#0f172a;
+        margin-bottom:10px;
+        font-size:1.4rem;
+    }
+
+    .empty-vendor p{
+        color:#64748b;
+        font-size:15px;
+    }
+
+    /* PAGINATION */
+    .pagination-wrap{
+        margin-top:40px;
+        display:flex;
+        justify-content:center;
+    }
+
+    /* ANIMATIONS */
+    @keyframes pageFade{
+        from{
+            opacity:0;
+            transform:translateY(20px);
+        }
+        to{
+            opacity:1;
+            transform:translateY(0);
+        }
+    }
+
+    @keyframes cardFade{
+        from{
+            opacity:0;
+            transform:translateY(35px);
+        }
+        to{
+            opacity:1;
+            transform:translateY(0);
+        }
+    }
+
+    @keyframes fadeIn{
+        from{
+            opacity:0;
+            transform:scale(.96);
+        }
+        to{
+            opacity:1;
+            transform:scale(1);
+        }
+    }
+
+    /* RESPONSIVE */
+    @media (max-width:1200px){
+        .vendor-grid{
+            grid-template-columns:repeat(3,1fr);
+        }
+    }
+
+    @media (max-width:900px){
+        .vendor-grid{
+            grid-template-columns:repeat(2,1fr);
+        }
+    }
+
+    @media (max-width:600px){
+
+        .vendors-header{
+                flex-direction:column;
+            align-items:flex-start;
+        }
+
+        .vendor-grid{
+            grid-template-columns:1fr;s
+        }
+
+        .vendors-title{  
+            font-size:1.6rem !important;
+        }
+    }
+</style>
 
                             <div class="vendor-grid">
                                 @forelse($vendors as $vendor)
@@ -2233,7 +2510,7 @@
                                         <a class="vendor-card-main" href="{{ route('admin.vendors.show', ['vendor' => $vendor->id]) }}" aria-label="View {{ $vendorName }} details">
                                             <div class="vendor-logo-wrap">
                                                 @if($vendor->photo)
-                                                    <img src="{{ str_contains($vendor->photo, '/') ? asset('storage/' . ltrim($vendor->photo, '/')) : asset('assets/images/vendors/' . $vendor->photo) }}" alt="{{ $vendorName }}">
+                                                    <img src="{{ \App\Support\MediaPath::url($vendor->photo, 'storage/public/vendor_photos') }}" alt="{{ $vendorName }}">
                                                 @else
                                                     <div style="font-size: 2rem; font-weight: 800; color: #e2e8f0;">{{ substr($vendorName, 0, 1) }}</div>
                                                 @endif
@@ -2263,8 +2540,31 @@
                                 @endforelse
                             </div>
 
-                            <div style="margin-top: 40px;">
-                                {{ $vendors->links('pagination::simple-bootstrap-4') }}
+                            <div class="custom-pagination-container vendor-pagination" style="margin-top: 40px;">
+                                <div class="pagination-info">
+                                    Showing <span>{{ $vendors->firstItem() ?? 0 }}</span> to <span>{{ $vendors->lastItem() ?? 0 }}</span> of <span>{{ $vendors->total() }}</span> entries
+                                </div>
+                                <div class="pagination-controls">
+                                    @if ($vendors->onFirstPage())
+                                        <span class="page-nav disabled">&larr; Prev</span>
+                                    @else
+                                        <a href="{{ $vendors->appends(request()->query())->previousPageUrl() }}" class="page-nav">&larr; Prev</a>
+                                    @endif
+
+                                    @foreach (range(1, $vendors->lastPage()) as $page)
+                                        @if ($page == $vendors->currentPage())
+                                            <span class="page-num active">{{ $page }}</span>
+                                        @else
+                                            <a href="{{ $vendors->appends(request()->query())->url($page) }}" class="page-num">{{ $page }}</a>
+                                        @endif
+                                    @endforeach
+
+                                    @if ($vendors->hasMorePages())
+                                        <a href="{{ $vendors->appends(request()->query())->nextPageUrl() }}" class="page-nav">Next &rarr;</a>
+                                    @else
+                                        <span class="page-nav disabled">Next &rarr;</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     @elseif ($currentPage === 'vendor-detail')
@@ -2272,7 +2572,7 @@
                             $vendorName = $vendor->display_name ?? trim(($vendor->first_name ?? '') . ' ' . ($vendor->last_name ?? ''));
                             $vendorName = trim((string) $vendorName) !== '' ? $vendorName : 'Unnamed Vendor';
                             $vendorPhoto = $vendor->photo ?? null;
-                            $vendorPhotoUrl = $vendorPhoto ? (str_contains($vendorPhoto, '/') ? asset('storage/' . ltrim($vendorPhoto, '/')) : asset('assets/images/vendors/' . $vendorPhoto)) : null;
+                            $vendorPhotoUrl = $vendorPhoto ? \App\Support\MediaPath::url($vendorPhoto, 'storage/public/vendor_photos') : null;
                             $vendorStatus = (int) ($vendor->status ?? 0) === 1 ? 'Active' : 'Inactive';
                         @endphp
                         <style>
@@ -4045,8 +4345,12 @@
                                             </td>
                                             <td style="font-weight: 600;" class="amenity-name-cell">{{ $amenity->name }}</td>
                                             <td>
-                                                <span class="badge badge-{{ strtolower(str_replace(' ', '-', $amenity->status)) }}">
-                                                    {{ $amenity->status }}
+                                                @php
+                                                    $statusDisplay = ($amenity->status == '1' || strtolower($amenity->status) == 'active') ? 'Active' : 'Inactive';
+                                                    $badgeClass = $statusDisplay === 'Active' ? 'active' : 'inactive';
+                                                @endphp
+                                                <span class="badge badge-{{ $badgeClass }}">
+                                                    {{ $statusDisplay }}
                                                 </span>
                                             </td>
                                             <td>
@@ -5342,12 +5646,12 @@
                                                     ]));
                                                     foreach ($candidateImagePaths as $candidateImagePath) {
                                                         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($candidateImagePath)) {
-                                                            $propertyPlaceImageUrl = asset('storage/' . $candidateImagePath);
+                                                            $propertyPlaceImageUrl = \App\Support\MediaPath::url($candidateImagePath);
                                                             break;
                                                         }
                                                     }
                                                     if (!$propertyPlaceImageUrl) {
-                                                        $propertyPlaceImageUrl = asset('storage/' . $normalizedImagePath);
+                                                        $propertyPlaceImageUrl = \App\Support\MediaPath::url($normalizedImagePath);
                                                     }
                                                 }
                                             }
@@ -5718,11 +6022,15 @@
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    <select class="status-select {{ (int)$property->approve_status === 1 ? 'bg-green' : ((int)$property->approve_status === 0 ? 'bg-red' : 'bg-pending') }}" onchange="this.className='status-select ' + (this.value=='1' ? 'bg-green' : (this.value=='0' ? 'bg-red' : 'bg-pending'))">
-                                                        <option value="1" {{ (int)$property->approve_status === 1 ? 'selected' : '' }}>Approve</option>
-                                                        <option value="2" {{ (int)$property->approve_status === 2 ? 'selected' : '' }}>Pending</option>
-                                                        <option value="0" {{ (int)$property->approve_status === 0 ? 'selected' : '' }}>Rejected</option>
-                                                    </select>
+                                                    <form method="POST" action="{{ route('admin.properties.approval-status', ['id' => $property->id]) }}">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <select name="approve_status" class="status-select {{ (int)$property->approve_status === 1 ? 'bg-green' : ((int)$property->approve_status === 0 ? 'bg-red' : 'bg-pending') }}" onchange="this.className='status-select ' + (this.value=='1' ? 'bg-green' : (this.value=='0' ? 'bg-red' : 'bg-pending')); this.form.submit();">
+                                                            <option value="1" {{ (int)$property->approve_status === 1 ? 'selected' : '' }}>Approve</option>
+                                                            <option value="2" {{ (int)$property->approve_status === 2 ? 'selected' : '' }}>Pending</option>
+                                                            <option value="0" {{ (int)$property->approve_status === 0 ? 'selected' : '' }}>Rejected</option>
+                                                        </select>
+                                                    </form>
                                                 </td>
                                                 <td>
                                                     <select class="status-select {{ (int)$property->status === 1 ? 'bg-green' : 'bg-red' }}" onchange="this.className='status-select ' + (this.value=='1' ? 'bg-green' : 'bg-red')">
@@ -6056,7 +6364,7 @@
                                                 <label class="upload-panel media-main" for="propertyDisplayImage" id="displayImageUploadArea">
                                                     @if(($mode ?? '') === 'edit' && !empty($property->main_property_image))
                                                         <div style="position: relative; display: inline-block;">
-                                                            <img src="{{ asset('storage/' . ltrim($property->main_property_image, '/')) }}" style="max-width:100%; max-height:140px; border-radius:4px; object-fit:cover;">
+                                                            <img src="{{ \App\Support\MediaPath::url($property->main_property_image) }}" style="max-width:100%; max-height:140px; border-radius:4px; object-fit:cover;">
                                                             <div class="remove-img-btn" id="removeExistingDisplayImage">&times;</div>
                                                         </div>
                                                     @else
@@ -6991,10 +7299,10 @@
     <div class="amenities-header-row" style="justify-content: space-between; margin-bottom:20px;">
         <h2 class="amenities-title">Registered Users</h2>
 
-        <button type="button" class="btn-add-primary" onclick="openAddUserModal()">
+        <a href="{{ route('admin.users.create') }}" class="btn-add-primary" style="text-decoration:none;">
             <span style="font-size:1.1rem;font-weight:800;">+</span>
             Add User
-        </button>
+        </a>
     </div>
 
     <div class="table-controls">
@@ -8397,7 +8705,7 @@
                                 <div class="media-empty">
                                     <i class="fas fa-folder-open"></i>
                                     <h3>No images found</h3>
-                                    <p>No image files were found in <code>storage/app/public/newimg</code></p>
+                                    <p>No image files were found in <code>public/storage/public</code> or <code>storage/app/public</code></p>
                                 </div>
                             @else
                                 {{-- Folder Tabs --}}

@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Throwable;
+use App\Support\MediaPath;
 
 class AdminRegistrationController extends Controller
 {
@@ -404,6 +405,34 @@ class AdminRegistrationController extends Controller
         return redirect()->back()->with('status', 'Could not update property.');
     }
 
+    public function updatePropertyApprovalStatus(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'approve_status' => ['required', 'in:0,1,2'],
+        ]);
+
+        $connection = $this->resolvePropertiesConnection();
+        if (! $connection || ! Schema::connection($connection)->hasTable('properties')) {
+            return redirect()
+                ->route('admin.section', ['section' => 'manage-properties'])
+                ->with('status', 'Property table not found.');
+        }
+
+        $property = DB::connection($connection)->table('properties')->where('id', $id)->first();
+        abort_if(! $property, 404);
+
+        $payload = ['approve_status' => (int) $validated['approve_status']];
+        if (Schema::connection($connection)->hasColumn('properties', 'updated_at')) {
+            $payload['updated_at'] = now();
+        }
+
+        DB::connection($connection)->table('properties')->where('id', $id)->update($payload);
+
+        return redirect()
+            ->route('admin.section', ['section' => 'manage-properties'])
+            ->with('status', 'Property approval status updated successfully.');
+    }
+
     private function validatePropertyPayload(Request $request, bool $isEdit = false): array
     {
         $displayImageRule = $isEdit ? ['nullable', 'image', 'mimes:png,jpg,jpeg,avif', 'max:2048'] : ['required', 'image', 'mimes:png,jpg,jpeg,avif', 'max:2048'];
@@ -759,10 +788,13 @@ class AdminRegistrationController extends Controller
         }
 
         if ($section === 'interior-enquiries') {
-            $enquiries = DB::table('interiar_enquiries')
-                ->where('deleted', 0)
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+            $interiorEnquiriesTable = $this->interiorEnquiriesTable();
+            $enquiries = $interiorEnquiriesTable
+                ? DB::table($interiorEnquiriesTable)
+                    ->where('deleted', 0)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10)
+                : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
 
             return view('admin-dashboard', array_merge(
                 $this->dashboardViewData($user),
@@ -802,9 +834,7 @@ class AdminRegistrationController extends Controller
                 ->select('vendors.*', 'vendor_infos.name as display_name')
                 ->paginate(12)
                 ->through(function ($vendor) {
-                    // Explicitly provide the 'logo' attribute from the 'photo' column
-                    $vendor->logo = $vendor->photo;
-                    return $vendor;
+                    return $this->prepareVendorDetails($vendor);
                 });
 
             return view('admin-dashboard', array_merge(
@@ -818,40 +848,6 @@ class AdminRegistrationController extends Controller
         }
 
         if ($section === 'media-library') {
-            $baseDir = storage_path('app/public/newimg');
-            $folders = [];
-
-            if (is_dir($baseDir)) {
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'];
-                $subDirs = array_filter(glob($baseDir . DIRECTORY_SEPARATOR . '*'), 'is_dir');
-
-                foreach ($subDirs as $subDir) {
-                    $folderName = basename($subDir);
-                    $images = [];
-
-                    $files = glob($subDir . DIRECTORY_SEPARATOR . '*.*');
-                    foreach ($files as $file) {
-                        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-                        if (in_array($ext, $allowedExtensions)) {
-                            $relativePath = 'newimg/' . $folderName . '/' . basename($file);
-                            $images[] = [
-                                'filename' => basename($file),
-                                'url'      => asset('storage/' . $relativePath),
-                                'size'     => round(filesize($file) / 1024, 1) . ' KB',
-                            ];
-                        }
-                    }
-
-                    if (!empty($images)) {
-                        $folders[] = [
-                            'name'   => ucwords(str_replace(['_', '-'], ' ', $folderName)),
-                            'slug'   => $folderName,
-                            'images' => $images,
-                        ];
-                    }
-                }
-            }
-
             return view('admin-dashboard', array_merge(
                 $this->dashboardViewData($user),
                 [
@@ -862,7 +858,7 @@ class AdminRegistrationController extends Controller
                         'slug'  => 'media-library',
                         'group' => 'media-library',
                     ],
-                    'mediaFolders' => $folders,
+                    'mediaFolders' => MediaPath::imageFolders(),
                 ]
             ));
         }
@@ -1378,8 +1374,9 @@ class AdminRegistrationController extends Controller
     public function storeBanner(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'type' => 'required|in:slider,list_view',
-            'image' => 'required|image|max:2048',
+            'type' => 'required|in:home_side,chennai_side,slider,list_view',
+            'image' => 'nullable|image|max:2048',
+            'selected_image_path' => 'nullable|string|max:255',
             'link' => 'nullable|url',
             'status' => 'nullable|in:1,0',
         ]);
@@ -1390,14 +1387,23 @@ class AdminRegistrationController extends Controller
                 ->with('status', 'Banner table not found. Run the latest migrations first.');
         }
 
-        $imageFile = $request->file('image');
-        $path = $imageFile->store('banners', 'public');
-
         if (! Schema::hasColumn('banners', 'image') && ! Schema::hasColumn('banners', 'file_path')) {
             return redirect()
                 ->route('admin.section', ['section' => 'banner'])
                 ->with('status', 'Banner table is missing an image/file_path column.');
         }
+
+        $imageFile = $request->file('image');
+        $selectedPath = $this->resolveBannerSelectedPath($validated['selected_image_path'] ?? null, $validated['type']);
+
+        if (! $imageFile && ! $selectedPath) {
+            return redirect()
+                ->route('admin.section', ['section' => 'banner'])
+                ->withErrors(['image' => 'Please upload an image or select one from the banner list.'])
+                ->withInput();
+        }
+
+        $path = $imageFile ? $imageFile->store('banners', 'public') : $selectedPath;
 
         $payload = [
             'link' => $validated['link'] ?? null,
@@ -1414,7 +1420,7 @@ class AdminRegistrationController extends Controller
         }
 
         if (Schema::hasColumn('banners', 'original_name')) {
-            $payload['original_name'] = $imageFile->getClientOriginalName();
+            $payload['original_name'] = $imageFile ? $imageFile->getClientOriginalName() : basename($path);
         }
 
         if (Schema::hasColumn('banners', 'unique_name')) {
@@ -1509,9 +1515,85 @@ class AdminRegistrationController extends Controller
         }
 
         return [
-            'sliderBanners' => $banners->where('type', 'slider')->values(),
-            'listViewBanners' => $banners->where('type', 'list_view')->values(),
+            'sliderBanners' => $banners->whereIn('type', ['home_side', 'slider', 'home'])->values(),
+            'listViewBanners' => $banners->whereIn('type', ['chennai_side', 'list_view', 'chennai'])->values(),
+            'bannerHasStatus' => Schema::hasColumn('banners', 'status'),
+            'listBannerImages' => $this->bannerFolderImages('list_banners'),
         ];
+    }
+
+    private function bannerFolderImages(string $folder): array
+    {
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'];
+        $roots = [
+            [
+                'path' => public_path('storage/public/' . $folder),
+                'prefix' => 'storage/public/' . $folder,
+            ],
+            [
+                'path' => storage_path('app/public/newimg/' . $folder),
+                'prefix' => 'newimg/' . $folder,
+            ],
+            [
+                'path' => public_path('images/properties_img/' . $folder),
+                'prefix' => 'images/properties_img/' . $folder,
+            ],
+        ];
+
+        $images = [];
+        $seen = [];
+
+        foreach ($roots as $root) {
+            if (! is_dir($root['path'])) {
+                continue;
+            }
+
+            foreach (glob($root['path'] . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                if (! is_file($file)) {
+                    continue;
+                }
+
+                $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                if (! in_array($extension, $allowedExtensions, true)) {
+                    continue;
+                }
+
+                $filename = basename($file);
+                if (isset($seen[$filename])) {
+                    continue;
+                }
+                $seen[$filename] = true;
+
+                $path = $root['prefix'] . '/' . $filename;
+                $images[] = [
+                    'filename' => $filename,
+                    'path' => $path,
+                    'url' => MediaPath::url($path),
+                ];
+            }
+        }
+
+        usort($images, fn (array $left, array $right) => strcmp($left['filename'], $right['filename']));
+
+        return $images;
+    }
+
+    private function resolveBannerSelectedPath(?string $path, string $type): ?string
+    {
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        $path = ltrim(str_replace('\\', '/', trim($path)), '/');
+        $allowedFolder = in_array($type, ['chennai_side', 'list_view', 'chennai'], true) ? 'list_banners' : 'home_banners';
+
+        foreach ($this->bannerFolderImages($allowedFolder) as $image) {
+            if (hash_equals($image['path'], $path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     public function storeOurPartner(Request $request): RedirectResponse
@@ -1592,10 +1674,7 @@ class AdminRegistrationController extends Controller
             'status' => $statusVal,
         ];
 
-        if ($imagePath) {
-            $data['images'] = json_encode([$imagePath]);
-            $data['image'] = $imagePath;
-        }
+        $this->setInteriorImageData($data, $imagePath);
 
         \App\Models\InteriorDesign::create($data);
 
@@ -1629,13 +1708,7 @@ class AdminRegistrationController extends Controller
             'status' => $statusVal,
         ];
 
-        if ($imagePath) {
-            $data['images'] = json_encode([$imagePath]);
-            $data['image'] = $imagePath;
-        } else {
-            $data['images'] = null;
-            $data['image'] = null;
-        }
+        $this->setInteriorImageData($data, $imagePath);
 
         $interior->update($data);
 
@@ -1654,6 +1727,17 @@ class AdminRegistrationController extends Controller
         return redirect()
             ->route('admin.section', ['section' => 'interior'])
             ->with('status', 'Interior design deleted successfully!');
+    }
+
+    private function setInteriorImageData(array &$data, ?string $imagePath): void
+    {
+        if (Schema::hasColumn('interior_designs', 'images')) {
+            $data['images'] = $imagePath ? json_encode([$imagePath]) : null;
+        }
+
+        if (Schema::hasColumn('interior_designs', 'image')) {
+            $data['image'] = $imagePath;
+        }
     }
 
     public function storeVendor(Request $request): RedirectResponse
@@ -1899,11 +1983,21 @@ class AdminRegistrationController extends Controller
             'state_id' => 'required|exists:property_states,id',
         ]);
 
-        \App\Models\City::create([
+        $data = [
             'name' => $validated['name'],
             'country_id' => $validated['country_id'],
             'state_id' => $validated['state_id'],
-        ]);
+        ];
+
+        if (Schema::hasColumn('property_cities', 'image')) {
+            $data['image'] = '';
+        }
+
+        if (Schema::hasColumn('property_cities', 'status')) {
+            $data['status'] = 1;
+        }
+
+        \App\Models\City::create($data);
 
         return redirect()
             ->route('admin.section', [ 'section' => 'cities'])
@@ -2229,19 +2323,41 @@ class AdminRegistrationController extends Controller
 
     public function createUser(): View
     {
-        return view('user-form', [
-            
-            'mode' => 'create',
-        ]);
+        $user = Auth::guard('admin')->user();
+
+        return view('admin-dashboard', array_merge(
+            $this->dashboardViewData($user),
+            [
+                'currentPage' => 'add-user',
+                'currentGroup' => 'user-management',
+                'currentItem' => [
+                    'label' => 'Add User',
+                    'slug' => 'add-user',
+                    'group' => 'user-management',
+                ],
+                'mode' => 'create',
+            ]
+        ));
     }
 
     public function editUser(User $targetUser): View
     {
-        return view('user-form', [
-            
-            'targetUser' => $targetUser,
-            'mode' => 'edit',
-        ]);
+        $user = Auth::guard('admin')->user();
+
+        return view('admin-dashboard', array_merge(
+            $this->dashboardViewData($user),
+            [
+                'currentPage' => 'edit-user',
+                'currentGroup' => 'user-management',
+                'currentItem' => [
+                    'label' => 'Edit User',
+                    'slug' => 'edit-user',
+                    'group' => 'user-management',
+                ],
+                'targetUser' => $targetUser,
+                'mode' => 'edit',
+            ]
+        ));
     }
 
     public function storeUser(Request $request): RedirectResponse
@@ -2327,7 +2443,12 @@ class AdminRegistrationController extends Controller
             return redirect()->back()->with('error', 'Invalid status.');
         }
 
-        DB::table('interiar_enquiries')->where('id', $id)->update(['status' => $status]);
+        $interiorEnquiriesTable = $this->interiorEnquiriesTable();
+        if (! $interiorEnquiriesTable) {
+            return redirect()->back()->with('error', 'Interior enquiries table not found.');
+        }
+
+        DB::table($interiorEnquiriesTable)->where('id', $id)->update(['status' => $status]);
 
         return redirect()->back()->with('status', 'Interior enquiry status updated successfully!');
     }
@@ -2370,6 +2491,25 @@ class AdminRegistrationController extends Controller
         return $query;
     }
 
+    private function interiorEnquiriesTable(): ?string
+    {
+        foreach (['interiar_enquiries', 'interior_enquiries'] as $table) {
+            if (Schema::hasTable($table)) {
+                return $table;
+            }
+        }
+
+        return null;
+    }
+
+    private function formatDashboardScore(int $total): string
+    {
+        $score = min(10, round($total / 10, 1));
+        $scoreText = fmod($score, 1.0) === 0.0 ? number_format($score, 0) : number_format($score, 1);
+
+        return $scoreText . '/10 Score';
+    }
+
     private function prepareVendorDetails(object $vendor): object
     {
         $displayName = trim((string) ($vendor->display_name ?? ''));
@@ -2380,9 +2520,45 @@ class AdminRegistrationController extends Controller
             $vendor->details = $vendor->info_details;
         }
 
+        $vendor->photo = $this->normalizeVendorPhotoPath($vendor->photo ?? null);
         $vendor->logo = $vendor->photo ?? null;
 
         return $vendor;
+    }
+
+    private function normalizeVendorPhotoPath(?string $photo): ?string
+    {
+        if (! is_string($photo) || trim($photo) === '') {
+            return null;
+        }
+
+        $photo = trim(str_replace('\\', '/', $photo));
+
+        if (
+            str_starts_with($photo, 'http://')
+            || str_starts_with($photo, 'https://')
+            || str_starts_with($photo, 'data:')
+            || str_contains($photo, '/')
+        ) {
+            return ltrim($photo, '/');
+        }
+
+        $storagePublicCandidate = public_path('storage/public/vendor_photos/' . $photo);
+        if (is_file($storagePublicCandidate)) {
+            return 'vendor_photos/' . $photo;
+        }
+
+        $storageCandidate = storage_path('app/public/vendor_photos/' . $photo);
+        if (is_file($storageCandidate)) {
+            return 'vendor_photos/' . $photo;
+        }
+
+        $legacyPublicCandidate = public_path('assets/images/vendors/' . $photo);
+        if (is_file($legacyPublicCandidate)) {
+            return $photo;
+        }
+
+        return 'vendor_photos/' . $photo;
     }
 
     private function syncVendorInfo(int $vendorId, array $validated): void
@@ -2458,7 +2634,8 @@ class AdminRegistrationController extends Controller
         }
 
         $totalVendors = Schema::hasTable('vendors') ? DB::table('vendors')->count() : 0;
-        $totalInteriorEnquiries = Schema::hasTable('interior_enquiries') ? DB::table('interior_enquiries')->count() : 0;
+        $interiorEnquiriesTable = $this->interiorEnquiriesTable();
+        $totalInteriorEnquiries = $interiorEnquiriesTable ? DB::table($interiorEnquiriesTable)->where('deleted', 0)->count() : 0;
 
         return [
             'user' => $user,
@@ -2466,7 +2643,7 @@ class AdminRegistrationController extends Controller
                 [
                     'label' => 'Total User',
                     'value' => number_format(User::count()),
-                    'change' => '8.5% Up from Last Month',
+                    'change' => $this->formatDashboardScore(User::count()),
                     'tone' => 'lavender',
                     'icon' => 'users',
                     'slug' => 'registered-users',
@@ -2474,7 +2651,7 @@ class AdminRegistrationController extends Controller
                 [
                     'label' => 'Property Seller',
                     'value' => number_format($totalVendors),
-                    'change' => '8.5% Up from Last Month',
+                    'change' => $this->formatDashboardScore($totalVendors),
                     'tone' => 'gold',
                     'icon' => 'box',
                     'slug' => 'registered-vendors',
@@ -2482,7 +2659,7 @@ class AdminRegistrationController extends Controller
                 [
                     'label' => 'Total Properties',
                     'value' => number_format($totalProperties),
-                    'change' => '4.3% Down from Last Month',
+                    'change' => $this->formatDashboardScore($totalProperties),
                     'tone' => 'mint',
                     'icon' => 'chart',
                     'slug' => 'manage-properties',
@@ -2490,7 +2667,7 @@ class AdminRegistrationController extends Controller
                 [
                     'label' => 'Total Property Enquiries',
                     'value' => number_format(\App\Models\PropertyEnquiry::count()),
-                    'change' => '8.5% Up from Last Month',
+                    'change' => $this->formatDashboardScore(\App\Models\PropertyEnquiry::count()),
                     'tone' => 'peach',
                     'icon' => 'prop-enquiry',
                     'slug' => 'property-enquiry',
@@ -2498,7 +2675,7 @@ class AdminRegistrationController extends Controller
                 [
                     'label' => 'Total Interior Enquiries',
                     'value' => number_format($totalInteriorEnquiries),
-                    'change' => '8.5% Up from Last Month',
+                    'change' => $this->formatDashboardScore($totalInteriorEnquiries),
                     'tone' => 'peach',
                     'icon' => 'interior',
                     'slug' => 'interior-enquiries',
