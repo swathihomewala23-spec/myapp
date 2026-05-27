@@ -24,20 +24,13 @@ RUN mkdir -p \
     storage/framework/testing \
     storage/framework/views \
     storage/logs \
-    database \
-    && touch database/database.sqlite \
-    && rm -f bootstrap/cache/*.php \
-    && chmod -R 775 bootstrap/cache storage database
+    && chmod -R 775 bootstrap/cache storage
+
+RUN php artisan key:generate
 
 RUN composer install --no-dev --optimize-autoloader --no-scripts \
-    && php artisan key:generate \
-    && php artisan package:discover --ansi \
-    && php artisan migrate --force
-
-RUN chmod +x docker-entrypoint.sh
+    && php artisan package:discover --ansi
 
 EXPOSE 10000
 
-ENTRYPOINT ["./docker-entrypoint.sh"]
-
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=10000"]
+CMD php artisan serve --host=0.0.0.0 --port=10000
