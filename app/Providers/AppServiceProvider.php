@@ -20,7 +20,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('production') || str_starts_with((string) config('app.url'), 'https://')) {
+        $forceHttps = filter_var(env('FORCE_HTTPS', false), FILTER_VALIDATE_BOOL);
+        $renderUrl = (string) env('RENDER_EXTERNAL_URL', '');
+
+        if (
+            $forceHttps
+            || $this->app->environment('production')
+            || str_starts_with((string) config('app.url'), 'https://')
+            || str_starts_with($renderUrl, 'https://')
+        ) {
             URL::forceScheme('https');
         }
     }
