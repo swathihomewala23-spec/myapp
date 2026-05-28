@@ -8,10 +8,13 @@ mkdir -p \
     storage/framework/sessions \
     storage/framework/testing \
     storage/framework/views \
-    storage/logs \
-    database
+    storage/logs
 
-touch database/database.sqlite
+if [ "${DB_CONNECTION:-mysql}" = "sqlite" ]; then
+    mkdir -p database
+    touch "${DB_DATABASE:-database/database.sqlite}"
+fi
+
 chmod -R 775 bootstrap/cache storage database
 
 php artisan config:clear --ansi
