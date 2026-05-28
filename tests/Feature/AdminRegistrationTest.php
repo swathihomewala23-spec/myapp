@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Admin;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -30,25 +31,30 @@ class AdminRegistrationTest extends TestCase
             'password' => 'password123',
         ]);
 
-        $response->assertRedirect(route('admin.dashboard', 1));
+        $response->assertRedirect(route('admin.dashboard'));
         $response->assertSessionHas('status', 'Admin account created successfully.');
 
-        $this->assertDatabaseHas('users', [
-            'email' => 'admin@example.com',
+        $this->assertDatabaseHas('admins', [
+            'username' => 'admin-user',
             'name' => 'Admin User',
         ]);
 
         $this->assertTrue(
-            User::where('email', 'admin@example.com')->firstOrFail()->password !== 'password123'
+            Admin::where('username', 'admin-user')->firstOrFail()->password !== 'password123'
         );
     }
 
     public function test_admin_can_update_registered_user_statuses(): void
     {
-        $admin = User::factory()->create(['status' => 1, 'email_verified_at' => null]);
+        $admin = Admin::create([
+            'name' => 'Admin User',
+            'username' => 'admin-user',
+            'email' => 'admin@example.com',
+            'password' => 'password123',
+        ]);
         $target = User::factory()->create(['status' => 1, 'email_verified_at' => now()]);
 
-        $response = $this->put(route('admin.users.updateStatus', ['user' => $admin, 'targetUser' => $target]), [
+        $response = $this->actingAs($admin, 'admin')->put(route('admin.users.updateStatus', ['targetUser' => $target]), [
             'account_status' => 'inactive',
         ]);
         $response->assertRedirect();
@@ -57,7 +63,7 @@ class AdminRegistrationTest extends TestCase
             'status' => 0,
         ]);
 
-        $response = $this->put(route('admin.users.updateEmailVerification', ['user' => $admin, 'targetUser' => $target]), [
+        $response = $this->actingAs($admin, 'admin')->put(route('admin.users.updateEmailVerification', ['targetUser' => $target]), [
             'email_status' => 'unverified',
         ]);
         $response->assertRedirect();
